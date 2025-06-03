@@ -20,21 +20,18 @@ class BeyondDnDAPIError(Exception):
     pass
 
 
-class BeyondDnD:
+class BeyondDnDClient:
+    # TODO: If useful, in future can store character ids by campaign_id to manage multiple campaigns.
     # Added custom item param in case, to prevent changes in future if we use homebrew/custom
     _BASE_URL = 'https://character-service.dndbeyond.com/character/v5/character/{}?includeCustomItems=true'
     _LOCAL_CHARACTER_DATA_FILE = 'local_character_data.json'
     _LOCAL_CHARACTER_IDS_FILE = 'local_character_ids.json'
 
-    def get_bdnd_all_character_data(
-        self, char_ids: List[str] = None, update_one: bool = False, force_update: bool = False
-    ) -> dict:
+    def get_all_characters_data(self, char_ids: List[str] = None, force_update: bool = False) -> dict:
         # If getting char_ids, get new data anyway
         if char_ids:
             char_data = self.__get_all_character_data(char_ids)
-            # If only updating a single character, don't overwrite the ID file
-            if not update_one:
-                self.__save_local_file(char_ids, self._LOCAL_CHARACTER_IDS_FILE)
+            self.__save_local_file(char_ids, self._LOCAL_CHARACTER_IDS_FILE)
             self.__save_local_file(char_data, self._LOCAL_CHARACTER_DATA_FILE)
             return char_data
         else:
@@ -48,6 +45,22 @@ class BeyondDnD:
                 return char_data
         raise BeyondDnDAPIError("Characters ids were not provided and the default file was not found.")
 
+    def get_one_characters_data(self, char_id: str, force_update: bool = False):
+        if force_update:
+            char_data = self.__get_all_character_data([char_id])
+            self.__update_local_file_if_exists(char_data, self._LOCAL_CHARACTER_DATA_FILE)
+            return char_data
+        else:
+            # Check if the data exists locally
+            character_data = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_DATA_FILE)
+            if character_data:
+                return character_data
+            # If no data stored locally, do not retrieve from API. Prefer bulk ID's to prevent random characters
+            # from being added.
+        raise BeyondDnDAPIError(
+            f'No local data was found for character_id: {char_id}. Try again with force_update or update all characters'
+        )
+
     def __get_all_character_data(self, char_ids: List[str]) -> dict:
         character_data = {}
         for char_id in char_ids:
@@ -57,8 +70,8 @@ class BeyondDnD:
         return character_data
 
     @staticmethod
-    def __save_local_file(data, file):
-        cur_dir = os.getcwd() # ["146993912", "144768530"]
+    def __save_local_file(data, file: str):
+        cur_dir = os.getcwd()
         file_path = cur_dir+'/tmp'
         if not os.path.exists(file_path):
             os.makedirs(file_path, exist_ok=True)
@@ -68,13 +81,21 @@ class BeyondDnD:
             f.close()
 
     @staticmethod
-    def __load_local_file_if_exists(save_path):
+    def __load_local_file_if_exists(save_path: str):
         cur_dir = os.getcwd()
-        file_path = Path(cur_dir+'/tmp/'+save_path)
+        file_path = Path(cur_dir + '/tmp/' + save_path)
         if file_path.exists():
             with open(file_path, 'r') as f:
                 return loads(f.read())
         return None
+
+    def __update_local_file_if_exists(self, data: dict, file: str) -> bool:
+        local_data = self.__load_local_file_if_exists(file)
+        if local_data and type(local_data) == dict:
+            local_data.update(data)
+            self.__save_local_file(local_data, file)
+            return True
+        return False
 
     def __get_bdnd_character_data(self, char_id: str):
         headers = {
@@ -174,14 +195,16 @@ class BeyondDnD:
                 counts[name] = quantity + counts[name]
 
         for item in custom_items:
-            # Can add a focus check here if we add something custom
+            # Note: Can add a focus check here if we add something custom
             name = item.get('name')
             if not name or not name.startswith(SPELL_COMPONENT_PREFIX):
                 continue
             splits = name.split(':')
-            if len(splits) < 3:  # if we get rid of prefix, this will need to be changed.
+            if len(splits) < 3:  # if we get rid of 'SMC' prefix, this will need to be changed.
                 continue
-            # IF FOR SOME REASON THERE ARE TWO ITEMS OF THE SAME TYPE, WE ARE NOT ADDING RN. IT WILL BE OVERWRITTEN
+            # NOTE: If there are more than 1 custom item with the same name, the last found will be the only displayed.
+            #  If for some reason we need multiple entries, that will require a code change. But seriously, just update
+            #  the one custom item asshole.
             custom_counts[splits[1]] = splits[2]
         return counts, custom_counts, focus
 
