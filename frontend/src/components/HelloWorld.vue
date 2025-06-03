@@ -19,7 +19,7 @@ export default {
       axios.get('/characters', {
         params: {
           "force_update": false,
-          "char_ids": ["146993912", "144768530"]
+          "char_ids": null
         },
         paramsSerializer: {
           indexes: null
@@ -39,3 +39,4 @@ export default {
   },
 };
 </script>
+// ["146993912", "144768530"]

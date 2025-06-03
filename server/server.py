@@ -26,7 +26,7 @@ beyond = BeyondDnDClient()
 
 
 @app.get('/characters')
-def get_all_character_data(request: Request, char_ids: Annotated[Optional[List[str] | None], Query()], force_update: bool = False):
+def get_all_character_data(request: Request, char_ids: Optional[List[str]] = Query(None, nullable=True), force_update: bool = False):
     # Note: This would be simpler if the DnDBeyond API allowed for a get on campaign w/o auth. One ID, all characters.
     try:
         char_data = beyond.get_all_characters_data(char_ids=char_ids, force_update=force_update)

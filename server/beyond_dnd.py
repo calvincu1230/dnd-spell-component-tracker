@@ -40,6 +40,7 @@ class BeyondDnDClient:
                 return character_data
             local_char_ids = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_IDS_FILE)
             if local_char_ids:
+                # No local data was present, but IDs were. Make call for updated data
                 char_data = self.__get_all_character_data(local_char_ids)
                 self.__save_local_file(char_data, self._LOCAL_CHARACTER_DATA_FILE)
                 return char_data
@@ -187,7 +188,7 @@ class BeyondDnDClient:
                 continue
             subtype = item_data.get('subType')
             if self.__item_is_focus_item(subtype):
-                focus = item_data
+                focus = self.__format_focus_data(item_data)
             quantity = item_data.get('quantity', 1)  # default to 1, assuming this item is present and thus 1
             if name not in counts:
                 counts[name] = quantity
