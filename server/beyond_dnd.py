@@ -204,7 +204,7 @@ class BeyondDnDClient:
             subtype = item_data.get('subType')
             if self.__item_is_focus_item(subtype):
                 focus = self.__extract_focus_data(item_data)
-            quantity = item_data.get('quantity', 1)  # default to 1, assuming this item is present and thus 1
+            quantity = item.get('quantity', 1)  # default to 1, assuming this item is present and thus 1
             if name not in counts:
                 counts[name] = quantity
             else:
