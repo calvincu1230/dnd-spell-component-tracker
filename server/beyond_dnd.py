@@ -146,7 +146,7 @@ class BeyondDnDClient:
             'focus': focus,
         }
 
-    def __build_character_spell_list(self, data: dict) -> dict:
+    def __build_character_spell_list(self, data: dict) -> List[dict]:
         """
         Spells can come from multiple places in test_data:
             test_data.spells.race [] - Spells from characters race/species
@@ -154,7 +154,7 @@ class BeyondDnDClient:
             test_data.spells.item [] - Spells that come from items, I think this is unimportant.Typically, the options of effects
             test_data.classSpells [] - Spells / cantrips chosen when leveling
         """
-        parsed_spells = {}
+        parsed_spells = []
         spells = data.get('spells', {})
         class_leveling_spells = []
         for cls_spells in data.get('classSpells', []):
@@ -168,14 +168,15 @@ class BeyondDnDClient:
             spell_data = spell.get('definition', {})
             name = spell_data.get('name')
             component_desc = spell_data.get('componentsDescription')
-            spell_description = self.parse_spell_description(component_desc)
-            parsed_spells[name] = spell_description
+            spell_data = self.__parse_spell_description(name, component_desc)
+            parsed_spells.append(spell_data)
         return parsed_spells
 
     @staticmethod
-    def parse_spell_description(description: Optional[str]) -> dict:
+    def __parse_spell_description(name: str, description: Optional[str]) -> dict:
         if not description:
             return {
+                'name': name,
                 'componentsDescription': '',
                 'componentsAreConsumed': False,
                 'componentsHaveCost': False,
@@ -184,6 +185,7 @@ class BeyondDnDClient:
         found_consume_text = CONSUME_TEXT.lower() in description.lower()
         found_gp_cost_text = GP_COST_TEXT.lower() in description.lower()
         return {
+            'name': name,
             'componentsDescription': description,
             'componentsAreConsumed': found_consume_text,
             'componentsHaveCost': found_gp_cost_text,
