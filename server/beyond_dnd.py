@@ -48,8 +48,10 @@ class BeyondDnDClient:
 
     def get_one_characters_data(self, char_id: str, force_update: bool = False):
         if force_update:
-            dungeon_data = self.__get_all_character_data([char_id])
-            self.__update_local_file_if_exists(dungeon_data, self._LOCAL_CHARACTER_DATA_FILE)
+            dungeon_data = self.__get_one_characters_data(char_id)
+            self.__update_local_file_if_exists(
+                {'characters': {char_id: dungeon_data}}, self._LOCAL_CHARACTER_DATA_FILE
+            )
             return dungeon_data
         else:
             # Check if the data exists locally
@@ -61,6 +63,11 @@ class BeyondDnDClient:
         raise BeyondDnDAPIError(
             f'No local data was found for character_id: {char_id}. Try again with force_update or update all characters'
         )
+
+    def __get_one_characters_data(self, char_id: str) -> dict:
+        resp = self.__get_bdnd_character_data(char_id)
+        resp_data = resp.get('data', {})
+        return self.__format_character_data(resp_data, char_id)
 
     def __get_all_character_data(self, char_ids: List[str]) -> dict:
         all_character_data = {}
@@ -100,7 +107,7 @@ class BeyondDnDClient:
 
     def __update_local_file_if_exists(self, data: dict, file: str) -> bool:
         local_data = self.__load_local_file_if_exists(file)
-        if local_data and type(local_data) == dict:
+        if local_data and isinstance(local_data, dict):
             local_data.update(data)
             self.__save_local_file(local_data, file)
             return True
