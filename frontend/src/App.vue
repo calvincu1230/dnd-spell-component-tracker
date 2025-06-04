@@ -4,47 +4,65 @@ import HelloWorld from './components/HelloWorld.vue'
 import axios from 'axios';
 
 export default {
+  components: {
+    HelloWorld
+  },
+  data() {
+    return {
+      isLoading: false,
+      characterData: {},
+      campaignData: {},
+      characterIds: {},
+      forceUpdate: false
+    }
+  },
   methods: {
-    async getAllCharacterData(force_update, ) {
+    async getAllCharacterData(characterIds, forceUpdate) {
       try {
-        axios.get(
-          `http://127.0.0.0:8998/characters?force_update=${force_update}`, {
-          params: {
-            "force_update": false,
-            "char_ids": null
-          },
-          paramsSerializer: { indexes: null },
-        })
-        .then((res) => {
-          console.log(res)
-          this.msg = res.data;
-        })
-        .catch((error) => {
-          console.error(error);
-        });
-      } catch {
-         console.log("asdasda")
+      const res = await axios.get(
+        `http://127.0.0.1:8998/characters`, {
+        params: {
+          "force_update": forceUpdate,
+          "char_ids": characterIds
+        },
+        paramsSerializer: { indexes: null },
+      });
+      this.characterData = res.data.characters;
+      this.campaignData = res.data.campaign;
+      console.log(this.characterData)
+    } catch(error) {
+        console.error(error);
+      };
+    },
+    async getOneCharactersData(characterId, forceUpdate) {
+      try {
+        const res = await axios.get(
+          `http://127.0.0.1:8998/characters/${characterId}`, {
+            params: {"force_update": forceUpdate},
+            paramsSerializer: { indexes: null },
+          })
+          if (res.data) {
+            this.characterData[characterId] = res.data
+          }
+          console.log(this.characterData)
+        } catch(error) {
+          console.log(error);
+        }
       }
     }
   }
-}
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <div class="wrapper">
+    <HelloWorld 
+      :campaignData="campaignData" 
+      :characterData="characterData"
+      :getOneCharactersData="getOneCharactersData">
+    </HelloWorld>
 
-    <div class="wrapper">
-      <HelloWorld campaignTitle="THIS IS A TEST!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-  <button @click="getAllCharacterData"></button>
-  <RouterView />
+  </div>
+  <button @click="getAllCharacterData(characterIds, false)">Get Data</button>
 </template>
 
 <style scoped>

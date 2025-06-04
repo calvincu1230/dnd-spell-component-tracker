@@ -1,7 +1,8 @@
 <script>
 import axios from 'axios';
     defineProps({
-        campagnTitle:
+        campagnTitle,
+        characterData,
     })
 </script>
 <template>

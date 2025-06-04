@@ -36,9 +36,9 @@ class BeyondDnDClient:
             return dungeon_data
         else:
             character_data = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_DATA_FILE)
-            if character_data and not force_update:
-                return character_data
             local_char_ids = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_IDS_FILE)
+            if character_data and not force_update and len(local_char_ids) == len(character_data.get('characters', {})): # type: ignore
+                return character_data
             if local_char_ids:
                 # No local data was present, but IDs were. Make call for updated data
                 dungeon_data = self.__get_all_character_data(local_char_ids)
@@ -55,9 +55,10 @@ class BeyondDnDClient:
             return dungeon_data
         else:
             # Check if the data exists locally
-            character_data = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_DATA_FILE)
-            if character_data:
-                return character_data
+            all_character_data = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_DATA_FILE)
+            if all_character_data:
+                character_data = all_character_data.get('characters', {})
+                if char_id in character_data: return character_data[char_id]
             # If no data stored locally, do not retrieve from API. Prefer bulk ID's to prevent random characters
             #   from being added.
         raise BeyondDnDAPIError(
