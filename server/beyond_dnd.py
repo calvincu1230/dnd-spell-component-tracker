@@ -30,10 +30,10 @@ class BeyondDnDClient:
     def get_all_characters_data(self, char_ids: List[str] = None, force_update: bool = False) -> dict:
         # If getting char_ids, get new data anyway
         if char_ids:
-            char_data = self.__get_all_character_data(char_ids)
+            dungeon_data = self.__get_all_character_data(char_ids)
             self.__save_local_file(char_ids, self._LOCAL_CHARACTER_IDS_FILE)
-            self.__save_local_file(char_data, self._LOCAL_CHARACTER_DATA_FILE)
-            return char_data
+            self.__save_local_file(dungeon_data, self._LOCAL_CHARACTER_DATA_FILE)
+            return dungeon_data
         else:
             character_data = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_DATA_FILE)
             if character_data and not force_update:
@@ -41,34 +41,42 @@ class BeyondDnDClient:
             local_char_ids = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_IDS_FILE)
             if local_char_ids:
                 # No local data was present, but IDs were. Make call for updated data
-                char_data = self.__get_all_character_data(local_char_ids)
-                self.__save_local_file(char_data, self._LOCAL_CHARACTER_DATA_FILE)
-                return char_data
+                dungeon_data = self.__get_all_character_data(local_char_ids)
+                self.__save_local_file(dungeon_data, self._LOCAL_CHARACTER_DATA_FILE)
+                return dungeon_data
         raise BeyondDnDAPIError("Characters ids were not provided and the default file was not found.")
 
     def get_one_characters_data(self, char_id: str, force_update: bool = False):
         if force_update:
-            char_data = self.__get_all_character_data([char_id])
-            self.__update_local_file_if_exists(char_data, self._LOCAL_CHARACTER_DATA_FILE)
-            return char_data
+            dungeon_data = self.__get_all_character_data([char_id])
+            self.__update_local_file_if_exists(dungeon_data, self._LOCAL_CHARACTER_DATA_FILE)
+            return dungeon_data
         else:
             # Check if the data exists locally
             character_data = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_DATA_FILE)
             if character_data:
                 return character_data
             # If no data stored locally, do not retrieve from API. Prefer bulk ID's to prevent random characters
-            # from being added.
+            #   from being added.
         raise BeyondDnDAPIError(
             f'No local data was found for character_id: {char_id}. Try again with force_update or update all characters'
         )
 
     def __get_all_character_data(self, char_ids: List[str]) -> dict:
-        character_data = {}
+        all_character_data = {}
+        campaign_data = None
         for char_id in char_ids:
             resp = self.__get_bdnd_character_data(char_id)
-            data = self.__format_character_data(resp, char_id)
-            character_data[char_id] = data
-        return character_data
+            resp_data = resp.get('data', {})
+            if not campaign_data:
+                # only need to get this data once, ignore once successful
+                campaign_data = self.__extract_campaign_metadata(resp_data.get('campaign'))
+            character_data = self.__format_character_data(resp_data, char_id)
+            all_character_data[char_id] = character_data
+        return {
+            "characters": all_character_data,
+            "campaign": campaign_data
+        }
 
     @staticmethod
     def __save_local_file(data, file: str):
@@ -114,10 +122,9 @@ class BeyondDnDClient:
             raise BeyondDnDAPIError("Something didn't work")
         return resp.json()
 
-    def __format_character_data(self, data: dict, char_id: str) -> (str, dict):
-        if not data:
+    def __format_character_data(self, char_data: dict, char_id: str) -> dict:
+        if not char_data:
             raise BeyondDnDAPIError(f'No Character test_data found for characterId: {char_id}')
-        char_data = data.get('data', {})
         name = char_data.get("name")
         inventory_items = char_data.get("inventory")
         custom_items = char_data.get("customItems")
@@ -128,7 +135,7 @@ class BeyondDnDClient:
             'spells': spells,
             'custom_items': counted_custom_items,
             'inventory': counted_items,
-            'focus': focus
+            'focus': focus,
         }
 
     def __build_character_spell_list(self, data: dict) -> dict:
@@ -188,7 +195,7 @@ class BeyondDnDClient:
                 continue
             subtype = item_data.get('subType')
             if self.__item_is_focus_item(subtype):
-                focus = self.__format_focus_data(item_data)
+                focus = self.__extract_focus_data(item_data)
             quantity = item_data.get('quantity', 1)  # default to 1, assuming this item is present and thus 1
             if name not in counts:
                 counts[name] = quantity
@@ -216,10 +223,20 @@ class BeyondDnDClient:
         return subtype.lower() in {HOLY_SYMBOL, ARCANE_FOCUS, DRUIDIC_FOCUS}
 
     @staticmethod
-    def __format_focus_data(focus_data: dict) -> dict:
+    def __extract_focus_data(focus_data: dict) -> dict:
         return {
             'name': focus_data.get('name', ''),
             'type': focus_data.get('type', ''),
             'subType': focus_data.get('subType', ''),
             'description': focus_data.get('description', '')
+        }
+
+    @staticmethod
+    def __extract_campaign_metadata(campaign_data: Optional[dict]) -> Optional[dict]:
+        if not campaign_data:
+            return None
+        return {
+            "name": campaign_data.get('name', ''),
+            "description": campaign_data.get('description', ''),
+            "dmUsername": campaign_data.get('dmUsername', '')
         }
