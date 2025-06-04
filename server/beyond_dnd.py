@@ -2,7 +2,7 @@ import os
 import requests
 import logging
 from json import dumps, loads
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class BeyondDnDClient:
     _LOCAL_CHARACTER_DATA_FILE = 'local_character_data.json'
     _LOCAL_CHARACTER_IDS_FILE = 'local_character_ids.json'
 
-    def get_all_characters_data(self, char_ids: List[str] = None, force_update: bool = False) -> dict:
+    def get_all_characters_data(self, char_ids: Optional[List[str]] = None, force_update: bool = False) -> dict:
         # If getting char_ids, get new data anyway
         if char_ids:
             dungeon_data = self.__get_all_character_data(char_ids)
@@ -126,8 +126,8 @@ class BeyondDnDClient:
         if not char_data:
             raise BeyondDnDAPIError(f'No Character test_data found for characterId: {char_id}')
         name = char_data.get("name")
-        inventory_items = char_data.get("inventory")
-        custom_items = char_data.get("customItems")
+        inventory_items = char_data.get("inventory", [])
+        custom_items = char_data.get("customItems", [])
         counted_items, counted_custom_items, focus = self.__count_inventory_items(inventory_items, custom_items)
         spells = self.__build_character_spell_list(char_data)
         return {
@@ -182,7 +182,7 @@ class BeyondDnDClient:
             'focusWillWork': not found_consume_text and not found_gp_cost_text
         }
 
-    def __count_inventory_items(self, inventory_items: List[dict], custom_items: List[dict]) -> (dict, dict, Optional[dict]):
+    def __count_inventory_items(self, inventory_items: List[dict], custom_items: List[dict]) -> Tuple[dict, dict, Optional[dict]]:
         # Returns item counts, custom item counts, and focus item if found (None otherwise)
         focus = None
         counts = {}
@@ -217,7 +217,7 @@ class BeyondDnDClient:
         return counts, custom_counts, focus
 
     @staticmethod
-    def __item_is_focus_item(subtype: str = None) -> bool:
+    def __item_is_focus_item(subtype: Optional[str] = None) -> bool:
         if not subtype:
             return False
         return subtype.lower() in {HOLY_SYMBOL, ARCANE_FOCUS, DRUIDIC_FOCUS}
