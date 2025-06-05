@@ -8,48 +8,47 @@ export default {
   },
   data() {
     return {
-      isLoading: false,
       characterData: {},
-      campaignData: {},
-      characterIds: {},
-      forceUpdate: false
+      campaignData: {}
     }
+  },
+  mounted() {
+    // checks if cached file exists on server
+    this.getAllCharacterData([], false);
   },
   methods: {
     async getAllCharacterData(characterIds, forceUpdate) {
       try {
-      const res = await axios.get(
-        `http://127.0.0.1:8998/characters`, {
-        params: {
-          "force_update": forceUpdate,
-          "char_ids": characterIds
-        },
-        paramsSerializer: { indexes: null },
-      });
-      this.characterData = res.data.characters;
-      this.campaignData = res.data.campaign;
-      console.log(this.characterData)
-    } catch(error) {
+        const res = await axios.get(
+          `http://127.0.0.1:8998/characters`, {
+          params: {
+            "force_update": forceUpdate,
+            "char_ids": characterIds
+          },
+          paramsSerializer: { indexes: null },
+        });
+        this.characterData = res.data.characters;
+        this.campaignData = res.data.campaign;
+      } catch(error) {
         console.error(error);
       };
     },
-    async getOneCharactersData(characterId, forceUpdate) {
+    async updateCurrentCharactersData(characterId, forceUpdate) {
       try {
         const res = await axios.get(
           `http://127.0.0.1:8998/characters/${characterId}`, {
             params: {"force_update": forceUpdate},
             paramsSerializer: { indexes: null },
           })
-          if (res.data) {
-            this.characterData[characterId] = res.data
-          }
-          console.log(this.characterData)
-        } catch(error) {
-          console.log(error);
+        if (res.data) {
+          this.characterData[characterId] = res.data
         }
+      } catch(error) {
+        console.log(error);
       }
     }
   }
+}
 </script>
 
 <template>
@@ -57,11 +56,14 @@ export default {
     <DnDMainView 
       :campaignData="campaignData" 
       :characterData="characterData"
-      :getOneCharactersData="getOneCharactersData"
+      :updateCurrentCharactersData="updateCurrentCharactersData"
       :getAllCharacterData="getAllCharacterData"
-      >
-    </DnDMainView>
-
+    />
   </div>
-  <button @click="getAllCharacterData(characterIds, false)">Get Data</button>
 </template>
+
+<style>
+body {
+  font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+</style>

@@ -11,19 +11,54 @@
       </div>
     </div>
 
+    <!-- Character ID Input Section - Only show when no character is selected -->
+    <div class="text-center text-gray-500 py-8" v-if="!selectedCharacter">
+        <CharacterIdInput
+          :getAllCharacterData="props.getAllCharacterData"
+          :character-ids="characterIds"
+          @update:character-ids="updateCharacterIds"
+        />
+    </div>
+
     <!-- Character Selector -->
-    <div class="mb-6" v-if="characterIds.length > 0">
-      <label class="block text-sm font-medium text-gray-700 mb-2">
-        Select Character:
-      </label>
-      <select 
-        v-model="selectedCharacterId"
-        class="block w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      >
-        <option v-for="id in characterIds" :key="id" :value="id">
-          {{ characterData[id]?.name || `Character ${id}` }}
-        </option>
-      </select>
+    <div class="mb-6" v-if="selectedCharacter && Object.keys(characterData).length > 0">
+      <ul class="button-list">
+        <li>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Select Character:
+          </label>
+          <select 
+            v-model="selectedCharacterId"
+            class="block w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option v-for="id in computedCharacterIds" :key="id" :value="id">
+              {{ characterData[id]?.name || `Character ${id}` }}
+            </option>
+          </select>
+        </li>
+        <li>
+          <GenericButton
+            :onClick="() => getAllCharacterData(computedCharacterIds, forceUpdate)"
+            text="Get All Character Data"
+          />
+        </li>
+        <li>
+          <GenericButton
+            :onClick="() => updateCurrentCharactersData(selectedCharacterId, forceUpdate)"
+            text="Update Current Character"
+          />
+        </li>
+        <li class="checkbox-container">
+          <label class="checkbox-label">
+            <span class="checkbox-text">Force Update</span>
+            <input 
+              type="checkbox" 
+              v-model="forceUpdate" 
+              class="checkbox-input"
+            />
+          </label>
+        </li>
+      </ul>
     </div>
 
     <!-- Character Display -->
@@ -38,19 +73,19 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Name
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Components Description
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Components Consumed
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Components Have Cost
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Focus Will Work
                 </th>
               </tr>
@@ -64,30 +99,18 @@
                   {{ spell.componentsDescription || '—' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span :class="`px-2 py-1 rounded-full text-xs ${
-                    spell.componentsAreConsumed 
-                      ? 'bg-red-100 text-red-800' 
-                      : 'bg-green-100 text-green-800'
-                  }`">
-                    {{ spell.componentsAreConsumed ? 'Yes' : 'No' }}
+                  <span :class="`px-2 py-1 rounded-full text-xs`">
+                    <img :src="spell.componentsAreConsumed ? checkMark : xMark " width="20" height="20">
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span :class="`px-2 py-1 rounded-full text-xs ${
-                    spell.componentsHaveCost 
-                      ? 'bg-red-100 text-red-800' 
-                      : 'bg-green-100 text-green-800'
-                  }`">
-                    {{ spell.componentsHaveCost ? 'Yes' : 'No' }}
+                  <span :class="`px-2 py-1 rounded-full text-xs`">
+                    <img :src="spell.componentsHaveCost ? checkMark : xMark " width="20" height="20">
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span :class="`px-2 py-1 rounded-full text-xs ${
-                    spell.focusWillWork 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`">
-                    {{ spell.focusWillWork ? 'Yes' : 'No' }}
+                  <span :class="`px-2 py-1 rounded-full text-xs`">
+                    <img :src="spell.focusWillWork ? checkMark : xMark " width="20" height="20">
                   </span>
                 </td>
               </tr>
@@ -105,7 +128,7 @@
             class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-lg transition-colors"
           >
             <h3 class="text-lg font-semibold text-gray-800">Inventory</h3>
-            <svg class="w-5 h-5" :class="{ 'transform rotate-90': showCustomItems }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" :class="{ 'transform rotate-90': showInventory }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>
           </button>
@@ -179,34 +202,39 @@
         </div>
       </div>
     </div>
-
-    <!-- No Character Selected -->
-    <div v-else class="text-center text-gray-500 py-8">
-      <p>No character data available. Click the button to load character data.</p>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import checkMark from '../assets/green-checkmark.png'
+import xMark from '../assets/red-x.png'
+import GenericButton from '../components/buttons/GenericButton.vue'
+import CharacterIdInput from '../components/CharacterIdInput.vue'
 
 const props = defineProps({
   campaignData: Object,
   characterData: Object,
-  getOneCharactersData: Function,
+  updateCurrentCharactersData: Function,
   getAllCharacterData: Function
 })
 
 // Reactive state
-const showInventory = ref(false)
-const showCustomItems = ref(false)
-const showFocus = ref(false)
-const selectedCharacterId = ref('')
+const showInventory = ref(false);
+const showCustomItems = ref(false);
+const showFocus = ref(false);
+const selectedCharacterId = ref('');
+const forceUpdate = ref(false);
+const characterIds = ref([])
 
 // Computed properties
-const characterIds = computed(() => {
+const computedCharacterIds = computed(() => {
   return props.characterData ? Object.keys(props.characterData) : []
 })
+
+const updateCharacterIds = (newIds) => {
+  characterIds.value = newIds
+}
 
 const selectedCharacter = computed(() => {
   if (!props.characterData || !selectedCharacterId.value) return null
@@ -229,7 +257,7 @@ watch(() => props.characterData, (newData) => {
 
 /* Container */
 .max-w-6xl {
-  max-width: 72rem;
+  max-width: 100%;
 }
 
 .mx-auto {
@@ -385,8 +413,8 @@ watch(() => props.characterData, (newData) => {
 }
 
 .py-1 {
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
+  padding-top: 1rem;
+  padding-bottom: .3rem;
 }
 
 .py-2 {
@@ -407,6 +435,14 @@ watch(() => props.characterData, (newData) => {
 .py-8 {
   padding-top: 2rem;
   padding-bottom: 2rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+  line-height: 1.4;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .pb-4 {
@@ -535,6 +571,14 @@ watch(() => props.characterData, (newData) => {
 }
 
 /* Table Styles */
+table {
+  text-align: center;
+}
+
+thead {
+  text-align: center;
+}
+
 .overflow-x-auto {
   overflow-x: auto;
 }
@@ -656,7 +700,6 @@ button {
   font: inherit;
 }
 
-/* Select styling */
 select {
   appearance: none;
   background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
@@ -664,5 +707,71 @@ select {
   background-repeat: no-repeat;
   background-size: 1.5em 1.5em;
   padding-right: 2.5rem;
+}
+
+.button-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 2rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.checkbox-container {
+  border-radius: 0.375rem;
+  padding: 6px;
+  background-color: #eab308;
+  box-sizing: border-box;
+  box-shadow: 2px 2px gray;
+}
+
+.checkbox-container:hover {
+  background-color: #ca8a04;
+}
+
+.button-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.button-list li {
+  display: flex;
+  flex-direction: column;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.checkbox-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: white;
+  line-height: 1.5rem;
+}
+
+.checkbox-input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #2563eb;
+  margin: 0;
+  flex-shrink: 0;
+  box-shadow: 1px 1px gray;
+}
+
+.char-id-container {
+  display: flex;
+  justify-content: center;
+  flex-grow: 1;
 }
 </style>

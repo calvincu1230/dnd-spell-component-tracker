@@ -1,6 +1,8 @@
 import os
+import shutil
 import requests
 import logging
+from http import HTTPStatus
 from json import dumps, loads
 from typing import List, Optional, Tuple
 from pathlib import Path
@@ -17,7 +19,9 @@ GP_COST_TEXT = 'gp'
 
 
 class BeyondDnDAPIError(Exception):
-    pass
+    def __init__(self, message, status_code):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class BeyondDnDClient:
@@ -25,26 +29,20 @@ class BeyondDnDClient:
     # Added custom item param in case, to prevent changes in future if we use homebrew/custom
     _BASE_URL = 'https://character-service.dndbeyond.com/character/v5/character/{}?includeCustomItems=true'
     _LOCAL_CHARACTER_DATA_FILE = 'local_character_data.json'
-    _LOCAL_CHARACTER_IDS_FILE = 'local_character_ids.json'
 
     def get_all_characters_data(self, char_ids: Optional[List[str]] = None, force_update: bool = False) -> dict:
-        # If getting char_ids, get new data anyway
-        if char_ids:
-            dungeon_data = self.__get_all_character_data(char_ids)
-            self.__save_local_file(char_ids, self._LOCAL_CHARACTER_IDS_FILE)
+        if not force_update:
+            character_data = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_DATA_FILE)
+            if character_data:
+                # return whatever data was previously saved
+                return character_data
+        dungeon_data = self.__get_all_character_data(char_ids)
+        if dungeon_data:
             self.__save_local_file(dungeon_data, self._LOCAL_CHARACTER_DATA_FILE)
             return dungeon_data
-        else:
-            character_data = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_DATA_FILE)
-            local_char_ids = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_IDS_FILE)
-            if character_data and not force_update and len(local_char_ids) == len(character_data.get('characters', {})): # type: ignore
-                return character_data
-            if local_char_ids:
-                # No local data was present, but IDs were. Make call for updated data
-                dungeon_data = self.__get_all_character_data(local_char_ids)
-                self.__save_local_file(dungeon_data, self._LOCAL_CHARACTER_DATA_FILE)
-                return dungeon_data
-        raise BeyondDnDAPIError("Characters ids were not provided and the default file was not found.")
+        raise BeyondDnDAPIError(
+            "Characters ids were not provided and/or the default file was not found.", HTTPStatus.BAD_REQUEST
+        )
 
     def get_one_characters_data(self, char_id: str, force_update: bool = False):
         if force_update:
@@ -62,8 +60,17 @@ class BeyondDnDClient:
             # If no data stored locally, do not retrieve from API. Prefer bulk ID's to prevent random characters
             #   from being added.
         raise BeyondDnDAPIError(
-            f'No local data was found for character_id: {char_id}. Try again with force_update or update all characters'
+            message=f'No local data was found for character_id: {char_id}. '
+                    f'Try again with force_update or update all characters',
+            status_code=HTTPStatus.NOT_FOUND,
         )
+
+    @staticmethod
+    def delete_all_cached_character_data():
+        cur_dir = os.getcwd()
+        directory_path = Path(cur_dir + '/tmp/')
+        if os.path.exists(directory_path):
+            shutil.rmtree(directory_path)
 
     def __get_one_characters_data(self, char_id: str) -> dict:
         resp = self.__get_bdnd_character_data(char_id)
@@ -89,10 +96,10 @@ class BeyondDnDClient:
     @staticmethod
     def __save_local_file(data, file: str):
         cur_dir = os.getcwd()
-        file_path = cur_dir+'/tmp'
+        file_path = cur_dir+'/tmp/'
         if not os.path.exists(file_path):
             os.makedirs(file_path, exist_ok=True)
-        with open(file_path+'/'+file, 'w') as f:
+        with open(file_path+file, 'w') as f:
             body = dumps(data)
             f.write(body)
             f.close()
@@ -127,12 +134,15 @@ class BeyondDnDClient:
                 "error": resp.text,
                 "statusCode": resp.status_code
             }))
-            raise BeyondDnDAPIError("Something didn't work")
+            raise BeyondDnDAPIError(f"BeyondDnD API failure, ensure character profile is set to Public and "
+                                    f"that the ID was entered correctly. Error: {resp.text}", resp.status_code)
         return resp.json()
 
     def __format_character_data(self, char_data: dict, char_id: str) -> dict:
         if not char_data:
-            raise BeyondDnDAPIError(f'No Character test_data found for characterId: {char_id}')
+            raise BeyondDnDAPIError(
+                f'No Character Data found for characterId: {char_id}', HTTPStatus.INTERNAL_SERVER_ERROR
+            )
         name = char_data.get("name")
         inventory_items = char_data.get("inventory", [])
         custom_items = char_data.get("customItems", [])

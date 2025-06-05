@@ -10,11 +10,16 @@ export default defineConfig({
   plugins: [
     vue(),
     vueJsx(),
-    vueDevTools(),
+    vueDevTools({
+      launchEditor: 'visualstudio'
+    }),
   ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
+  configureWebpack: {
+      devtool: 'source-map'
+    }
   },
 })
