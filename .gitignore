@@ -169,7 +169,7 @@ cython_debug/
 tmp/
 
 # Ruff stuff:
-.ruff_cache/
+.ruff_cache/x
 
 # PyPI configuration file
 .pypirc
@@ -206,3 +206,7 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# Project executable outputs
+/DnDSpellTracker/
+DnDSpellTracker.zip
