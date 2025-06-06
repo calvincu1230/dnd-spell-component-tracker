@@ -1,10 +1,12 @@
 <script>
 import DnDMainView from './views/DnDMainView.vue'
+import ThemeProvider from './components/ThemeProvider.vue'
 import axios from 'axios';
 
 export default {
   components: {
-    DnDMainView
+    DnDMainView,
+    ThemeProvider
   },
   data() {
     return {
@@ -61,19 +63,31 @@ export default {
 </script>
 
 <template>
-  <div class="wrapper">
-    <DnDMainView 
-      :campaignData="campaignData" 
-      :characterData="characterData"
-      :updateCurrentCharactersData="updateCurrentCharactersData"
-      :getAllCharacterData="getAllCharacterData"
-      :deleteAllCachedData="deleteAllCachedData"
-    />
-  </div>
+  <ThemeProvider>
+    <div class="wrapper">
+      <DnDMainView 
+        :campaignData="campaignData" 
+        :characterData="characterData"
+        :updateCurrentCharactersData="updateCurrentCharactersData"
+        :getAllCharacterData="getAllCharacterData"
+        :deleteAllCachedData="deleteAllCachedData"
+      />
+    </div>
+  </ThemeProvider>
 </template>
 
 <style>
 body {
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.wrapper {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
 }
 </style>

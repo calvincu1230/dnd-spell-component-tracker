@@ -4,7 +4,7 @@
 
         <!-- Character ID Display -->
         <div v-if="props.characterIds.length > 0" class="id-display-section">
-            <h4 class="text-sm font-medium text-gray-700 mb-2">
+            <h4 class="text-sm font-medium themed-text-secondary mb-2">
             Added Character IDs ({{ props.characterIds.length }})
             </h4>
             <div class="id-list">
@@ -179,6 +179,11 @@ const cancelConfirmation = () => {
 </script>
 
 <style scoped>
+/* Themed classes */
+.themed-text-secondary {
+  color: var(--text-secondary);
+}
+
 .character-id-input {
     display: flex;
     flex-direction: column;
@@ -201,7 +206,9 @@ const cancelConfirmation = () => {
 .text-input {
     flex: 1;
     padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-primary);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     line-height: 1.25rem;
@@ -216,7 +223,7 @@ const cancelConfirmation = () => {
 }
 
 .text-input::placeholder {
-    color: #9ca3af;
+    color: var(--text-muted);
 }
 
 /* ID Display Section */
@@ -234,22 +241,22 @@ const cancelConfirmation = () => {
 .id-item {
     display: flex;
     align-items: center;
-    background-color: #e5e7eb;
-    border: 1px solid #d1d5db;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
     border-radius: 0.5rem;
     padding: 0.25rem 0.5rem;
     transition: all 0.2s ease;
 }
 
 .id-item:hover {
-    background-color: #d1d5db;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: var(--bg-hover);
+    box-shadow: var(--shadow-sm);
 }
 
 .id-text {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--text-primary);
     padding: 0.25rem 0.5rem;
     user-select: none;
 }
@@ -296,7 +303,7 @@ const cancelConfirmation = () => {
 /* Helper Text */
 .helper-text {
     font-size: 0.9rem;
-    color: #6b7280;
+    color: var(--text-muted);
     line-height: 1.4;
     max-width: 600px;
 }
@@ -315,10 +322,6 @@ const cancelConfirmation = () => {
     font-weight: 500;
 }
 
-.text-gray-700 {
-    color: #374151;
-}
-
 .mb-2 {
     margin-bottom: 0.5rem;
 }
@@ -328,64 +331,6 @@ const cancelConfirmation = () => {
     display: grid;
     gap: 0.5rem;
     justify-content: center;
-}
-
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-  max-width: 400px;
-  width: 90%;
-  animation: modalAppear 0.2s ease-out;
-}
-
-@keyframes modalAppear {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.modal-header {
-  padding: 1.5rem 1.5rem 0 1.5rem;
-}
-
-.modal-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-}
-
-.modal-body {
-  padding: 1rem 1.5rem;
-  color: #4b5563;
-  line-height: 1.5;
-}
-
-.modal-footer {
-  padding: 0 1.5rem 1.5rem 1.5rem;
-  display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
 }
 
 /* Responsive Design */
@@ -401,14 +346,6 @@ const cancelConfirmation = () => {
     
     .id-item {
         justify-content: space-between;
-    }
-
-    .modal-content {
-        margin: 1rem;
-    }
-  
-    .modal-footer {
-        flex-direction: column-reverse;
     }
 }
 </style>

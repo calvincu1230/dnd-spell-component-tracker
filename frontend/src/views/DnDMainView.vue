@@ -1,5 +1,10 @@
 <template>
-  <div class="max-w-6xl mx-auto p-6 bg-white">
+  <div class="max-w-6xl mx-auto p-6 themed-bg">
+    <!-- Theme Toggle Button (fixed position) -->
+    <div class="theme-toggle-container">
+      <ThemeToggleButton />
+    </div>
+
     <!-- Campaign Header -->
     <div class="mb-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-lg">
       <div class="flex justify-between items-start">
@@ -24,12 +29,12 @@
     <div class="mb-6 button-container" v-if="selectedCharacter && Object.keys(characterData).length > 0">
       <ul class="button-list">
         <li>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
+          <label class="block text-sm font-medium themed-text-secondary mb-2">
             Select Character:
           </label>
           <select 
             v-model="selectedCharacterId"
-            class="block w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            class="themed-select block w-64 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option v-for="id in computedCharacterIds" :key="id" :value="id">
               {{ characterData[id]?.name || `Character ${id}` }}
@@ -62,69 +67,69 @@
     <div v-if="selectedCharacter">
       <!-- Character Name -->
        <div class="character-title-container">
-         <p class="text-2xl font-bold text-gray-800 mb-6 character-title">{{ selectedCharacter.name }}</p>
+         <p class="text-2xl font-bold themed-text-primary mb-6 character-title">{{ selectedCharacter.name }}</p>
        </div>
 
       <!-- Spells Table -->
       <div class="mb-8" v-if="selectedCharacter.spells">
-        <h3 class="text-xl font-semibold text-gray-800 mb-4">Spells</h3>
-        <div class="overflow-x-auto bg-white rounded-lg shadow">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+        <h3 class="text-xl font-semibold themed-text-primary mb-4">Spells</h3>
+        <div class="overflow-x-auto themed-bg-secondary rounded-lg shadow">
+          <table class="min-w-full divide-y themed-border-primary">
+            <thead class="themed-bg-tertiary">
               <tr>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium themed-text-muted uppercase tracking-wider">
                   Name
                 </th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium themed-text-muted uppercase tracking-wider">
                   Components Description
                 </th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium themed-text-muted uppercase tracking-wider">
                   Components Consumed
                 </th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium themed-text-muted uppercase tracking-wider">
                   Components Have Cost
                 </th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-3 text-center text-xs font-medium themed-text-muted uppercase tracking-wider">
                   Focus Will Work
                 </th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="themed-bg-secondary divide-y themed-border-primary">
               <tr v-if="selectedCharacter.spells.length == 0">
-                <td class="px-6 py-4 whitespace-nowrap text-medium font-medium text-gray-900">
+                <td class="px-6 py-4 whitespace-nowrap text-medium font-medium themed-text-primary">
                   -
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium themed-text-primary">
                   -
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm themed-text-tertiary">
                   -
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm themed-text-tertiary">
                   -
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm themed-text-tertiary">
                   -
                 </td>
               </tr>
-              <tr v-for="(spell, index) in selectedCharacter.spells" :key="index" class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              <tr v-for="(spell, index) in selectedCharacter.spells" :key="index" class="themed-row-hover">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium themed-text-primary">
                   {{ spell.name }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs break-words text-wrap">
+                <td class="px-6 py-4 whitespace-nowrap text-sm themed-text-tertiary max-w-xs break-words text-wrap">
                   {{ spell.componentsDescription || '—' }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm themed-text-tertiary">
                   <span class="px-2 py-1 rounded-full text-xs">
                     <img :src="spell.componentsAreConsumed ? checkMark : xMark " width="20" height="20">
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm themed-text-tertiary">
                   <span class="px-2 py-1 rounded-full text-xs">
                     <img :src="spell.componentsHaveCost ? checkMark : xMark " width="20" height="20">
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm themed-text-tertiary">
                   <span class="px-2 py-1 rounded-full text-xs">
                     <img :src="spell.focusWillWork ? checkMark : xMark " width="20" height="20">
                   </span>
@@ -138,12 +143,12 @@
       <!-- Collapsible Sections -->
       <div class="space-y-4">
         <!-- Inventory -->
-        <div class="bg-white rounded-lg shadow" v-if="selectedCharacter.inventory">
+        <div class="themed-bg-secondary rounded-lg shadow" v-if="selectedCharacter.inventory">
           <button
             @click="showInventory = !showInventory"
-            class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-lg transition-colors"
+            class="w-full px-6 py-4 text-left flex items-center justify-between themed-hover rounded-lg transition-colors"
           >
-            <h3 class="text-lg font-semibold text-gray-800">Inventory</h3>
+            <h3 class="text-lg font-semibold themed-text-primary">Inventory</h3>
             <svg class="w-5 h-5" :class="{ 'transform rotate-90': showInventory }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>
@@ -151,9 +156,9 @@
           <div v-show="showInventory" class="px-6 pb-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div v-for="(quantity, item) in selectedCharacter.inventory" :key="item" 
-                  class="flex justify-between items-center py-2 px-3 border border-gray-200 rounded bg-gray-50">
-                <span class="text-gray-800 font-medium">{{ item }}</span>
-                <span class="text-gray-600 bg-white px-2 py-1 rounded text-sm font-semibold">
+                  class="flex justify-between items-center py-2 px-3 border themed-border-secondary rounded themed-bg-tertiary">
+                <span class="themed-text-primary font-medium">{{ item }}</span>
+                <span class="themed-text-secondary themed-bg-secondary px-2 py-1 rounded text-sm font-semibold">
                   {{ quantity }}
                 </span>
               </div>
@@ -164,15 +169,15 @@
         <!-- Custom Items and Focus - Two Column Layout -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Custom Items -->
-          <div class="bg-white rounded-lg shadow" v-if="selectedCharacter.custom_items">
+          <div class="themed-bg-secondary rounded-lg shadow" v-if="selectedCharacter.custom_items">
             <button
               @click="showCustomItems = !showCustomItems"
-              class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-lg transition-colors"
+              class="w-full px-6 py-4 text-left flex items-center justify-between themed-hover rounded-lg transition-colors"
             >
               <div class="">
-                <h3 class="text-lg font-semibold text-gray-800 smc-title">Custom Spell Material Components</h3>
+                <h3 class="text-lg font-semibold themed-text-primary smc-title">Custom Spell Material Components</h3>
                 <div class="smc-note flex">
-                  <p class="px-6 py-3 text-left text-xs text-gray-500 smc-info">(Expected custom item naming format: "SMC:Diamond_Dust:500GP")</p>
+                  <p class="px-6 py-3 text-left text-xs themed-text-muted smc-info">(Expected custom item naming format: "SMC:Diamond_Dust:500GP")</p>
                 </div>
               </div>
               <svg class="w-5 h-5 alight-right" :class="{ 'transform rotate-90': showCustomItems }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,9 +187,9 @@
             <div v-show="showCustomItems" class="px-6 pb-4">
               <ul class="space-y-2">
                 <li v-for="(value, item) in selectedCharacter.custom_items" :key="item" 
-                    class="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                  <span class="text-gray-800">{{ item.replace(/_/g, ' ') }}</span>
-                  <span class="text-gray-600 bg-yellow-100 px-2 py-1 rounded text-sm">
+                    class="flex justify-between items-center py-2 border-b themed-border-tertiary last:border-b-0">
+                  <span class="themed-text-primary">{{ item.replace(/_/g, ' ') }}</span>
+                  <span class="themed-text-secondary bg-yellow-100 px-2 py-1 rounded text-sm">
                     {{ value }}
                   </span>
                 </li>
@@ -193,32 +198,32 @@
           </div>
 
           <!-- Focus -->
-          <div class="bg-white rounded-lg shadow" v-if="selectedCharacter.focus">
+          <div class="themed-bg-secondary rounded-lg shadow" v-if="selectedCharacter.focus">
             <button
               @click="showFocus = !showFocus"
-              class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-lg transition-colors"
+              class="w-full px-6 py-4 text-left flex items-center justify-between themed-hover rounded-lg transition-colors"
             >
-              <h3 class="text-lg font-semibold text-gray-800">Focus</h3>
+              <h3 class="text-lg font-semibold themed-text-primary">Focus</h3>
               <svg class="w-5 h-5" :class="{ 'transform rotate-90': showFocus }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
             </button>
             <div v-show="showFocus" class="px-6 pb-4 space-y-3">
               <div v-if="selectedCharacter.focus.name">
-                <span class="font-medium text-gray-700">Name:</span>
-                <span class="ml-2 text-gray-800">{{ selectedCharacter.focus.name }}</span>
+                <span class="font-medium themed-text-secondary">Name:</span>
+                <span class="ml-2 themed-text-primary">{{ selectedCharacter.focus.name }}</span>
               </div>
               <div v-if="selectedCharacter.focus.type">
-                <span class="font-medium text-gray-700">Type:</span>
-                <span class="ml-2 text-gray-800">{{ selectedCharacter.focus.type }}</span>
+                <span class="font-medium themed-text-secondary">Type:</span>
+                <span class="ml-2 themed-text-primary">{{ selectedCharacter.focus.type }}</span>
               </div>
               <div v-if="selectedCharacter.focus.subType">
-                <span class="font-medium text-gray-700">Subtype:</span>
-                <span class="ml-2 text-gray-800">{{ selectedCharacter.focus.subType }}</span>
+                <span class="font-medium themed-text-secondary">Subtype:</span>
+                <span class="ml-2 themed-text-primary">{{ selectedCharacter.focus.subType }}</span>
               </div>
               <div v-if="selectedCharacter.focus.description">
-                <span class="font-medium text-gray-700">Description:</span>
-                <div class="mt-1 text-gray-800 text-sm leading-relaxed" v-html="selectedCharacter.focus.description">
+                <span class="font-medium themed-text-secondary">Description:</span>
+                <div class="mt-1 themed-text-primary text-sm leading-relaxed" v-html="selectedCharacter.focus.description">
                 </div>
               </div>
             </div>
@@ -247,6 +252,7 @@ import xMark from '../assets/red-x-icon.png';
 import GenericButton from '../components/buttons/GenericButton.vue';
 import CharacterIdInput from '../components/CharacterIdInput.vue';
 import ConfirmationModal from '../components/ConfirmationModal.vue';
+import ThemeToggleButton from '../components/buttons/ThemeToggleButton.vue';
 
 const props = defineProps({
   campaignData: Object,
@@ -303,6 +309,74 @@ watch(() => props.characterData, (newData) => {
 </script>
 
 <style scoped>
+/* Theme Toggle Container */
+.theme-toggle-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+}
+
+/* Themed classes using CSS custom properties */
+.themed-bg {
+  background-color: var(--bg-primary);
+}
+
+.themed-bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.themed-bg-tertiary {
+  background-color: var(--bg-tertiary);
+}
+
+.themed-text-primary {
+  color: var(--text-primary);
+}
+
+.themed-text-secondary {
+  color: var(--text-secondary);
+}
+
+.themed-text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.themed-text-muted {
+  color: var(--text-muted);
+}
+
+.themed-border-primary {
+  border-color: var(--border-primary);
+}
+
+.themed-border-secondary {
+  border-color: var(--border-secondary);
+}
+
+.themed-border-tertiary {
+  border-color: var(--border-tertiary);
+}
+
+.themed-hover:hover {
+  background-color: var(--bg-hover);
+}
+
+.themed-row-hover:hover {
+  background-color: var(--bg-hover);
+}
+
+.themed-select {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-primary);
+}
+
+.themed-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
 /* Base Layout */
 .max-w-6xl {
   max-width: 72rem;
@@ -353,25 +427,6 @@ watch(() => props.characterData, (newData) => {
   }
 }
 
-/* Colors */
-.bg-white { background-color: #ffffff; }
-.bg-gray-50 { background-color: #f9fafb; }
-.bg-gray-100 { background-color: #f3f4f6; }
-.bg-yellow-100 { background-color: #fef3c7; }
-
-.text-white { color: #ffffff; }
-.text-gray-500 { color: #6b7280; }
-.text-gray-600 { color: #4b5563; }
-.text-gray-700 { color: #374151; }
-.text-gray-800 { color: #1f2937; }
-.text-gray-900 { color: #111827; }
-
-.border { border-width: 1px; }
-.border-b { border-bottom-width: 1px; }
-.border-gray-100 { border-color: #f3f4f6; }
-.border-gray-200 { border-color: #e5e7eb; }
-.border-gray-300 { border-color: #d1d5db; }
-
 /* Typography */
 .text-xs { font-size: 0.75rem; line-height: 1rem; }
 .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
@@ -407,14 +462,20 @@ watch(() => props.characterData, (newData) => {
 .max-w-xs { max-width: 20rem; }
 
 /* Borders and Shapes */
+.border { border-width: 1px; }
+.border-b { border-bottom-width: 1px; }
 .rounded { border-radius: 0.25rem; }
 .rounded-md { border-radius: 0.375rem; }
 .rounded-lg { border-radius: 0.5rem; }
 .rounded-full { border-radius: 9999px; }
 
 /* Effects */
-.shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
-.shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+.shadow { 
+  box-shadow: var(--shadow-md);
+}
+.shadow-sm { 
+  box-shadow: var(--shadow-sm);
+}
 .opacity-90 { opacity: 0.9; }
 
 /* Button and interactive element styling */
@@ -424,9 +485,6 @@ button {
   cursor: pointer;
   font: inherit;
 }
-
-/* Interactive States */
-.hover\:bg-gray-50:hover { background-color: #f9fafb; }
 
 /* Transitions */
 .transition-colors {
@@ -447,7 +505,6 @@ button {
 /* Table */
 .overflow-x-auto { overflow-x: auto; }
 .divide-y > * + * { border-top-width: 1px; }
-.divide-gray-200 > * + * { border-top-color: #e5e7eb; }
 .whitespace-nowrap { white-space: nowrap; }
 
 /* Text utilities */
@@ -456,22 +513,14 @@ button {
 
 /* Focus states */
 .focus\:outline-none:focus { outline: 2px solid transparent; outline-offset: 2px; }
-.focus\:ring-2:focus { box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000); --tw-ring-offset-width: 0px; --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color); }
+.focus\:ring-2:focus { 
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000); 
+  --tw-ring-offset-width: 0px; 
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color); 
+}
 .focus\:ring-offset-2:focus { --tw-ring-offset-width: 2px; }
 .focus\:ring-blue-500:focus { --tw-ring-color: #3b82f6; }
 .focus\:border-blue-500:focus { border-color: #3b82f6; }
-
-select:focus {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-}
-
-button:focus {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-}
 
 /* Form elements */
 select {
@@ -483,7 +532,7 @@ select {
   padding-right: 2.5rem;
 }
 
-/* Gradient */
+/* Gradient - keeping original colors for header */
 .bg-gradient-to-r {
   background-image: linear-gradient(to right, var(--tw-gradient-stops));
 }
@@ -496,6 +545,8 @@ select {
 .to-blue-600 {
   --tw-gradient-to: #2563eb;
 }
+
+.text-white { color: #ffffff; }
 
 /* List utilities */
 .last\:border-b-0:last-child {
@@ -522,15 +573,10 @@ table {
 
 thead {
   text-align: center;
-  background-color: #f9fafb;
-}
-
-tbody {
-  background-color: #ffffff;
 }
 
 tr:hover {
-  background-color: #f9fafb;
+  background-color: var(--bg-hover);
 }
 
 .smc-title {
@@ -552,5 +598,22 @@ tr:hover {
 .character-title{
   font-size: 3em;
   font-family: 'Medieval Times', sans-serif;
+}
+
+/* Special color overrides for elements that should stay consistent */
+.text-gray-500 {
+  color: var(--text-muted);
+}
+
+.bg-yellow-100 {
+  background-color: darkgoldenrod;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .theme-toggle-container {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
 }
 </style>
