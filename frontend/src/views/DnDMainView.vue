@@ -21,7 +21,7 @@
     </div>
 
     <!-- Character Selector -->
-    <div class="mb-6" v-if="selectedCharacter && Object.keys(characterData).length > 0">
+    <div class="mb-6 button-container" v-if="selectedCharacter && Object.keys(characterData).length > 0">
       <ul class="button-list">
         <li>
           <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -38,25 +38,22 @@
         </li>
         <li>
           <GenericButton
-            :onClick="() => getAllCharacterData(computedCharacterIds, forceUpdate)"
+            :onClick="() => getAllCharacterData(computedCharacterIds, true)"
             text="Get All Character Data"
           />
         </li>
         <li>
           <GenericButton
-            :onClick="() => updateCurrentCharactersData(selectedCharacterId, forceUpdate)"
+            :onClick="() => updateCurrentCharactersData(selectedCharacterId, true)"
             text="Update Current Character"
           />
         </li>
-        <li class="checkbox-container">
-          <label class="checkbox-label">
-            <span class="checkbox-text">Force Update</span>
-            <input 
-              type="checkbox" 
-              v-model="forceUpdate" 
-              class="checkbox-input"
-            />
-          </label>
+        <li>
+          <GenericButton
+            :onClick="showDeleteAllConfirmation"
+            text="Delete All Cached Data"
+            variant="danger"
+          />
         </li>
       </ul>
     </div>
@@ -64,10 +61,12 @@
     <!-- Character Display -->
     <div v-if="selectedCharacter">
       <!-- Character Name -->
-      <h2 class="text-2xl font-bold text-gray-800 mb-6">{{ selectedCharacter.name }}</h2>
+       <div class="character-title-container">
+         <p class="text-2xl font-bold text-gray-800 mb-6 character-title">{{ selectedCharacter.name }}</p>
+       </div>
 
       <!-- Spells Table -->
-      <div class="mb-8" v-if="selectedCharacter.spells && selectedCharacter.spells.length > 0">
+      <div class="mb-8" v-if="selectedCharacter.spells">
         <h3 class="text-xl font-semibold text-gray-800 mb-4">Spells</h3>
         <div class="overflow-x-auto bg-white rounded-lg shadow">
           <table class="min-w-full divide-y divide-gray-200">
@@ -91,25 +90,42 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-if="selectedCharacter.spells.length == 0">
+                <td class="px-6 py-4 whitespace-nowrap text-medium font-medium text-gray-900">
+                  -
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  -
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  -
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  -
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  -
+                </td>
+              </tr>
               <tr v-for="(spell, index) in selectedCharacter.spells" :key="index" class="hover:bg-gray-50">
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {{ spell.name }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs break-words text-wrap">
                   {{ spell.componentsDescription || '—' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span :class="`px-2 py-1 rounded-full text-xs`">
+                  <span class="px-2 py-1 rounded-full text-xs">
                     <img :src="spell.componentsAreConsumed ? checkMark : xMark " width="20" height="20">
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span :class="`px-2 py-1 rounded-full text-xs`">
+                  <span class="px-2 py-1 rounded-full text-xs">
                     <img :src="spell.componentsHaveCost ? checkMark : xMark " width="20" height="20">
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span :class="`px-2 py-1 rounded-full text-xs`">
+                  <span class="px-2 py-1 rounded-full text-xs">
                     <img :src="spell.focusWillWork ? checkMark : xMark " width="20" height="20">
                   </span>
                 </td>
@@ -133,131 +149,163 @@
             </svg>
           </button>
           <div v-show="showInventory" class="px-6 pb-4">
-            <ul class="space-y-2">
-              <li v-for="(quantity, item) in selectedCharacter.inventory" :key="item" 
-                  class="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                <span class="text-gray-800">{{ item }}</span>
-                <span class="text-gray-600 bg-gray-100 px-2 py-1 rounded text-sm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-for="(quantity, item) in selectedCharacter.inventory" :key="item" 
+                  class="flex justify-between items-center py-2 px-3 border border-gray-200 rounded bg-gray-50">
+                <span class="text-gray-800 font-medium">{{ item }}</span>
+                <span class="text-gray-600 bg-white px-2 py-1 rounded text-sm font-semibold">
                   {{ quantity }}
                 </span>
-              </li>
-            </ul>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Custom Items -->
-        <div class="bg-white rounded-lg shadow" v-if="selectedCharacter.custom_items">
-          <button
-            @click="showCustomItems = !showCustomItems"
-            class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <h3 class="text-lg font-semibold text-gray-800">Custom Items</h3>
-            <svg class="w-5 h-5" :class="{ 'transform rotate-90': showCustomItems }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
-          <div v-show="showCustomItems" class="px-6 pb-4">
-            <ul class="space-y-2">
-              <li v-for="(value, item) in selectedCharacter.custom_items" :key="item" 
-                  class="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                <span class="text-gray-800">{{ item.replace(/_/g, ' ') }}</span>
-                <span class="text-gray-600 bg-yellow-100 px-2 py-1 rounded text-sm">
-                  {{ value }}
-                </span>
-              </li>
-            </ul>
+        <!-- Custom Items and Focus - Two Column Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Custom Items -->
+          <div class="bg-white rounded-lg shadow" v-if="selectedCharacter.custom_items">
+            <button
+              @click="showCustomItems = !showCustomItems"
+              class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <div class="">
+                <h3 class="text-lg font-semibold text-gray-800 smc-title">Custom Spell Material Components</h3>
+                <div class="smc-note flex">
+                  <p class="px-6 py-3 text-left text-xs text-gray-500 smc-info">(Expected custom item naming format: "SMC:Diamond_Dust:500GP")</p>
+                </div>
+              </div>
+              <svg class="w-5 h-5 alight-right" :class="{ 'transform rotate-90': showCustomItems }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
+            <div v-show="showCustomItems" class="px-6 pb-4">
+              <ul class="space-y-2">
+                <li v-for="(value, item) in selectedCharacter.custom_items" :key="item" 
+                    class="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                  <span class="text-gray-800">{{ item.replace(/_/g, ' ') }}</span>
+                  <span class="text-gray-600 bg-yellow-100 px-2 py-1 rounded text-sm">
+                    {{ value }}
+                  </span>
+                </li>
+              </ul>
+            </div>
           </div>
-        </div>
 
-        <!-- Focus -->
-        <div class="bg-white rounded-lg shadow" v-if="selectedCharacter.focus">
-          <button
-            @click="showFocus = !showFocus"
-            class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <h3 class="text-lg font-semibold text-gray-800">Focus</h3>
-            <svg class="w-5 h-5" :class="{ 'transform rotate-90': showFocus }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
-          <div v-show="showFocus" class="px-6 pb-4 space-y-3">
-            <div v-if="selectedCharacter.focus.name">
-              <span class="font-medium text-gray-700">Name:</span>
-              <span class="ml-2 text-gray-800">{{ selectedCharacter.focus.name }}</span>
-            </div>
-            <div v-if="selectedCharacter.focus.type">
-              <span class="font-medium text-gray-700">Type:</span>
-              <span class="ml-2 text-gray-800">{{ selectedCharacter.focus.type }}</span>
-            </div>
-            <div v-if="selectedCharacter.focus.subType">
-              <span class="font-medium text-gray-700">Subtype:</span>
-              <span class="ml-2 text-gray-800">{{ selectedCharacter.focus.subType }}</span>
-            </div>
-            <div v-if="selectedCharacter.focus.description">
-              <span class="font-medium text-gray-700">Description:</span>
-              <div class="mt-1 text-gray-800 text-sm leading-relaxed" v-html="selectedCharacter.focus.description">
+          <!-- Focus -->
+          <div class="bg-white rounded-lg shadow" v-if="selectedCharacter.focus">
+            <button
+              @click="showFocus = !showFocus"
+              class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <h3 class="text-lg font-semibold text-gray-800">Focus</h3>
+              <svg class="w-5 h-5" :class="{ 'transform rotate-90': showFocus }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
+            <div v-show="showFocus" class="px-6 pb-4 space-y-3">
+              <div v-if="selectedCharacter.focus.name">
+                <span class="font-medium text-gray-700">Name:</span>
+                <span class="ml-2 text-gray-800">{{ selectedCharacter.focus.name }}</span>
+              </div>
+              <div v-if="selectedCharacter.focus.type">
+                <span class="font-medium text-gray-700">Type:</span>
+                <span class="ml-2 text-gray-800">{{ selectedCharacter.focus.type }}</span>
+              </div>
+              <div v-if="selectedCharacter.focus.subType">
+                <span class="font-medium text-gray-700">Subtype:</span>
+                <span class="ml-2 text-gray-800">{{ selectedCharacter.focus.subType }}</span>
+              </div>
+              <div v-if="selectedCharacter.focus.description">
+                <span class="font-medium text-gray-700">Description:</span>
+                <div class="mt-1 text-gray-800 text-sm leading-relaxed" v-html="selectedCharacter.focus.description">
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+    <!-- Confirmation Modal for Delete All Cached Data -->
+    <ConfirmationModal
+      :show="showDeleteConfirmation"
+      message="Are you sure you want to delete all cached character data? This will clear all stored information and cannot be undone."
+      title="Delete All Cached Data"
+      confirmText="Delete All"
+      cancelText="Cancel"
+      confirmVariant="danger"
+      @confirm="handleDeleteAllCachedData"
+      @cancel="hideDeleteConfirmation"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import checkMark from '../assets/green-checkmark.png'
-import xMark from '../assets/red-x.png'
-import GenericButton from '../components/buttons/GenericButton.vue'
-import CharacterIdInput from '../components/CharacterIdInput.vue'
+import { ref, computed, watch } from 'vue';
+import checkMark from '../assets/green-checkmark.png';
+import xMark from '../assets/red-x-icon.png';
+import GenericButton from '../components/buttons/GenericButton.vue';
+import CharacterIdInput from '../components/CharacterIdInput.vue';
+import ConfirmationModal from '../components/ConfirmationModal.vue';
 
 const props = defineProps({
   campaignData: Object,
   characterData: Object,
   updateCurrentCharactersData: Function,
-  getAllCharacterData: Function
-})
+  getAllCharacterData: Function,
+  deleteAllCachedData: Function,
+});
 
 // Reactive state
 const showInventory = ref(false);
 const showCustomItems = ref(false);
 const showFocus = ref(false);
 const selectedCharacterId = ref('');
-const forceUpdate = ref(false);
-const characterIds = ref([])
+const characterIds = ref([]);
+const showDeleteConfirmation = ref(false);
 
 // Computed properties
 const computedCharacterIds = computed(() => {
-  return props.characterData ? Object.keys(props.characterData) : []
-})
+  return props.characterData ? Object.keys(props.characterData) : [];
+});
 
 const updateCharacterIds = (newIds) => {
-  characterIds.value = newIds
+  characterIds.value = newIds;
 }
 
 const selectedCharacter = computed(() => {
-  if (!props.characterData || !selectedCharacterId.value) return null
-  return props.characterData[selectedCharacterId.value]
+  if (!props.characterData || !selectedCharacterId.value) return null;
+  return props.characterData[selectedCharacterId.value];
 })
+
+// Confirmation modal functions
+const showDeleteAllConfirmation = () => {
+  showDeleteConfirmation.value = true
+}
+
+const hideDeleteConfirmation = () => {
+  showDeleteConfirmation.value = false
+}
+
+const handleDeleteAllCachedData = () => {
+  if (props.deleteAllCachedData) {
+    props.deleteAllCachedData()
+  }
+  hideDeleteConfirmation()
+}
 
 // Watch for character data changes and set first character as selected
 watch(() => props.characterData, (newData) => {
   if (newData && Object.keys(newData).length > 0 && !selectedCharacterId.value) {
-    selectedCharacterId.value = Object.keys(newData)[0]
+    selectedCharacterId.value = Object.keys(newData)[0];
   }
-}, { immediate: true })
+}, { immediate: true });
 </script>
 
 <style scoped>
-/* Reset and base styles */
-* {
-  box-sizing: border-box;
-}
-
-/* Container */
+/* Base Layout */
 .max-w-6xl {
-  max-width: 100%;
+  max-width: 72rem;
 }
 
 .mx-auto {
@@ -265,348 +313,120 @@ watch(() => props.characterData, (newData) => {
   margin-right: auto;
 }
 
-.p-6 {
-  padding: 1.5rem;
+/* Spacing */
+.p-6 { padding: 1.5rem; }
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.py-8 { padding-top: 2rem; padding-bottom: 2rem; display: flex; justify-content: center;}
+.pb-4 { padding-bottom: 1rem; }
+
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-8 { margin-bottom: 2rem; }
+.mt-1 { margin-top: 0.25rem; }
+.ml-2 { margin-left: 0.5rem; }
+
+/* Grid Layout */
+.grid {
+  display: grid;
 }
 
-.bg-white {
-  background-color: #ffffff;
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 
-/* Campaign Header */
-.mb-8 {
-  margin-bottom: 2rem;
+.gap-4 {
+  gap: 1rem;
 }
 
-.bg-gradient-to-r {
-  background-image: linear-gradient(to right, #9333ea, #2563eb);
-}
-
-.from-purple-600 {
-  --tw-gradient-from: #9333ea;
-}
-
-.to-blue-600 {
-  --tw-gradient-to: #2563eb;
-}
-
-.text-white {
-  color: #ffffff;
-}
-
-.rounded-lg {
-  border-radius: 0.5rem;
-}
-
-.flex {
-  display: flex;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.items-start {
-  align-items: flex-start;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.text-3xl {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-}
-
-.text-2xl {
-  font-size: 1.5rem;
-  line-height: 2rem;
-}
-
-.text-xl {
-  font-size: 1.25rem;
-  line-height: 1.75rem;
-}
-
-.text-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-}
-
-.text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-}
-
-.text-xs {
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-
-.font-bold {
-  font-weight: 700;
-}
-
-.font-semibold {
-  font-weight: 600;
-}
-
-.font-medium {
-  font-weight: 500;
-}
-
-.text-right {
-  text-align: right;
-}
-
-.text-left {
-  text-align: left;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.opacity-90 {
-  opacity: 0.9;
-}
-
-/* Margins and Padding */
-.mb-1 {
-  margin-bottom: 0.25rem;
-}
-
-.mb-2 {
-  margin-bottom: 0.5rem;
-}
-
-.mb-4 {
-  margin-bottom: 1rem;
-}
-
-.mb-6 {
-  margin-bottom: 1.5rem;
-}
-
-.mt-1 {
-  margin-top: 0.25rem;
-}
-
-.ml-2 {
-  margin-left: 0.5rem;
-}
-
-.px-2 {
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-}
-
-.px-3 {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
-
-.px-6 {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-
-.py-1 {
-  padding-top: 1rem;
-  padding-bottom: .3rem;
-}
-
-.py-2 {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
-
-.py-3 {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-}
-
-.py-4 {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-}
-
-.py-8 {
-  padding-top: 2rem;
-  padding-bottom: 2rem;
-  font-size: 0.9rem;
-  color: #6b7280;
-  margin-top: 0.5rem;
-  line-height: 1.4;
-  text-align: center;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.pb-4 {
-  padding-bottom: 1rem;
+/* Medium screens and up - two columns */
+@media (min-width: 768px) {
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Colors */
-.text-gray-500 {
-  color: #6b7280;
-}
+.bg-white { background-color: #ffffff; }
+.bg-gray-50 { background-color: #f9fafb; }
+.bg-gray-100 { background-color: #f3f4f6; }
+.bg-yellow-100 { background-color: #fef3c7; }
 
-.text-gray-600 {
-  color: #4b5563;
-}
+.text-white { color: #ffffff; }
+.text-gray-500 { color: #6b7280; }
+.text-gray-600 { color: #4b5563; }
+.text-gray-700 { color: #374151; }
+.text-gray-800 { color: #1f2937; }
+.text-gray-900 { color: #111827; }
 
-.text-gray-700 {
-  color: #374151;
-}
+.border { border-width: 1px; }
+.border-b { border-bottom-width: 1px; }
+.border-gray-100 { border-color: #f3f4f6; }
+.border-gray-200 { border-color: #e5e7eb; }
+.border-gray-300 { border-color: #d1d5db; }
 
-.text-gray-800 {
-  color: #1f2937;
-}
+/* Typography */
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+.text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
 
-.text-gray-900 {
-  color: #111827;
-}
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
 
-.bg-gray-50 {
-  background-color: #f9fafb;
-}
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
 
-.bg-gray-100 {
-  background-color: #f3f4f6;
-}
-
-.border-gray-100 {
-  border-color: #f3f4f6;
-}
-
-.border-gray-200 {
-  border-color: #e5e7eb;
-}
-
-.border-gray-300 {
-  border-color: #d1d5db;
-}
-
-.divide-gray-200 > * + * {
-  border-top-color: #e5e7eb;
-}
-
-/* Badge Colors */
-.bg-red-100 {
-  background-color: #fee2e2;
-}
-
-.text-red-800 {
-  color: #991b1b;
-}
-
-.bg-green-100 {
-  background-color: #dcfce7;
-}
-
-.text-green-800 {
-  color: #166534;
-}
-
-.bg-yellow-100 {
-  background-color: #fef3c7;
-}
+.uppercase { text-transform: uppercase; }
+.tracking-wider { letter-spacing: 0.05em; }
+.leading-relaxed { line-height: 1.625; }
 
 /* Layout */
-.block {
-  display: block;
+.block { display: block; }
+.flex { display: flex; }
+.items-start { align-items: flex-start; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+
+.w-5 { width: 1.25rem; }
+.h-5 { height: 1.25rem; }
+.w-64 { width: 16rem; }
+.w-full { width: 100%; }
+.min-w-full { min-width: 100%; }
+.max-w-xs { max-width: 20rem; }
+
+/* Borders and Shapes */
+.rounded { border-radius: 0.25rem; }
+.rounded-md { border-radius: 0.375rem; }
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-full { border-radius: 9999px; }
+
+/* Effects */
+.shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
+.shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+.opacity-90 { opacity: 0.9; }
+
+/* Button and interactive element styling */
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
 }
 
-.w-5 {
-  width: 1.25rem;
-}
-
-.h-5 {
-  height: 1.25rem;
-}
-
-.w-64 {
-  width: 16rem;
-}
-
-.w-full {
-  width: 100%;
-}
-
-.min-w-full {
-  min-width: 100%;
-}
-
-/* Form Elements */
-.border {
-  border-width: 1px;
-}
-
-.border-b {
-  border-bottom-width: 1px;
-}
-
-.rounded {
-  border-radius: 0.25rem;
-}
-
-.rounded-md {
-  border-radius: 0.375rem;
-}
-
-.rounded-full {
-  border-radius: 9999px;
-}
-
-/* Shadows */
-.shadow {
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-}
-
-.shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-/* Table Styles */
-table {
-  text-align: center;
-}
-
-thead {
-  text-align: center;
-}
-
-.overflow-x-auto {
-  overflow-x: auto;
-}
-
-.divide-y {
-  border-top-width: 1px;
-}
-
-.divide-y > * + * {
-  border-top-width: 1px;
-}
-
-.whitespace-nowrap {
-  white-space: nowrap;
-}
-
-.uppercase {
-  text-transform: uppercase;
-}
-
-.tracking-wider {
-  letter-spacing: 0.05em;
-}
-
-/* Hover Effects */
-.hover\:bg-gray-50:hover {
-  background-color: #f9fafb;
-}
+/* Interactive States */
+.hover\:bg-gray-50:hover { background-color: #f9fafb; }
 
 /* Transitions */
 .transition-colors {
@@ -615,40 +435,37 @@ thead {
   transition-duration: 150ms;
 }
 
-.transition-transform {
-  transition-property: transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
 /* Transform */
-.transform {
-  transform: translateX(var(--tw-translate-x, 0)) translateY(var(--tw-translate-y, 0)) rotate(var(--tw-rotate, 0deg)) skewX(var(--tw-skew-x, 0deg)) skewY(var(--tw-skew-y, 0deg)) scaleX(var(--tw-scale-x, 1)) scaleY(var(--tw-scale-y, 1));
-}
+.transform { transform: translateX(var(--tw-translate-x, 0)) translateY(var(--tw-translate-y, 0)) rotate(var(--tw-rotate, 0deg)); }
+.rotate-90 { --tw-rotate: 90deg; }
 
-.rotate-90 {
-  --tw-rotate: 90deg;
-}
+/* Spacing utilities */
+.space-y-2 > * + * { margin-top: 0.5rem; }
+.space-y-3 > * + * { margin-top: 0.75rem; }
+.space-y-4 > * + * { margin-top: 1rem; }
 
-/* Spacing */
-.space-y-2 > * + * {
-  margin-top: 0.5rem;
-}
+/* Table */
+.overflow-x-auto { overflow-x: auto; }
+.divide-y > * + * { border-top-width: 1px; }
+.divide-gray-200 > * + * { border-top-color: #e5e7eb; }
+.whitespace-nowrap { white-space: nowrap; }
 
-.space-y-3 > * + * {
-  margin-top: 0.75rem;
-}
+/* Text utilities */
+.break-words { word-wrap: break-word; word-break: break-word; }
+.text-wrap { white-space: normal; }
 
-.space-y-4 > * + * {
-  margin-top: 1rem;
-}
+/* Focus states */
+.focus\:outline-none:focus { outline: 2px solid transparent; outline-offset: 2px; }
+.focus\:ring-2:focus { box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000); --tw-ring-offset-width: 0px; --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color); }
+.focus\:ring-offset-2:focus { --tw-ring-offset-width: 2px; }
+.focus\:ring-blue-500:focus { --tw-ring-color: #3b82f6; }
+.focus\:border-blue-500:focus { border-color: #3b82f6; }
 
-/* Focus States */
 select:focus {
   outline: 2px solid transparent;
   outline-offset: 2px;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 2px #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }
 
 button:focus {
@@ -656,26 +473,55 @@ button:focus {
   outline-offset: 2px;
 }
 
-/* List Styles */
-li:last-child.border-b {
-  border-bottom-width: 0;
+/* Form elements */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
 }
 
+/* Gradient */
+.bg-gradient-to-r {
+  background-image: linear-gradient(to right, var(--tw-gradient-stops));
+}
+
+.from-purple-600 {
+  --tw-gradient-from: #9333ea;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(147, 51, 234, 0));
+}
+
+.to-blue-600 {
+  --tw-gradient-to: #2563eb;
+}
+
+/* List utilities */
 .last\:border-b-0:last-child {
   border-bottom-width: 0;
 }
 
-/* Text */
-.leading-relaxed {
-  line-height: 1.625;
+/* Button list layout */
+.button-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  justify-content: space-evenly;
 }
 
-/* Tables */
+/* Table centering */
 table {
+  text-align: center;
   border-collapse: collapse;
 }
 
 thead {
+  text-align: center;
   background-color: #f9fafb;
 }
 
@@ -687,91 +533,24 @@ tr:hover {
   background-color: #f9fafb;
 }
 
-/* Custom component specific styles */
-.character-display {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+.smc-title {
+  margin-bottom: 0px;
 }
 
-/* Button reset */
-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font: inherit;
+.smc-info {
+  margin-top: 0px;
+  padding-top: 0px;
+  padding-left: 0px;
+  font-size: 10px;
 }
 
-select {
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.5rem center;
-  background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
-  padding-right: 2.5rem;
-}
-
-.button-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 2rem;
-  justify-content: center;
-  align-items: center;
-}
-
-.checkbox-container {
-  border-radius: 0.375rem;
-  padding: 6px;
-  background-color: #eab308;
-  box-sizing: border-box;
-  box-shadow: 2px 2px gray;
-}
-
-.checkbox-container:hover {
-  background-color: #ca8a04;
-}
-
-.button-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: flex-end;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.button-list li {
-  display: flex;
-  flex-direction: column;
-}
-
-.checkbox-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-}
-
-.checkbox-text {
-  font-size: 1rem;
-  font-weight: 500;
-  color: white;
-  line-height: 1.5rem;
-}
-
-.checkbox-input {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: #2563eb;
-  margin: 0;
-  flex-shrink: 0;
-  box-shadow: 1px 1px gray;
-}
-
-.char-id-container {
+.character-title-container {
   display: flex;
   justify-content: center;
-  flex-grow: 1;
+}
+
+.character-title{
+  font-size: 3em;
+  font-family: 'Medieval Times', sans-serif;
 }
 </style>

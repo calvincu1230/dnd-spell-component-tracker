@@ -27,7 +27,7 @@
             <!-- Clear All Button -->
             <div class="clear-section">
                 <GenericButton 
-                    :onClick="clearAllIds"
+                    :onClick="confirmClearAll"
                     text="Clear All"
                     variant="outline"
                 />
@@ -36,12 +36,10 @@
 
         <!-- Input Section -->
         <div class="input-section">
-            <!-- <label class="block text-sm font-medium text-gray-700 mb-2">
-                Character IDs: 
-            </label> -->
             <div class="input-group">
                 <input 
                     type="text" 
+                    ref="inputRef"
                     v-model="inputValue"
                     @input="handleInput"
                     @paste="handlePaste"
@@ -67,7 +65,7 @@
         </div>
 
         <!-- Get Character Data Button Section -->
-        <div class="data-button-container">
+        <div>
             <div class="data-button">
                 <GenericButton 
                     :onClick="() => getAllCharacterData(characterIds, true)"
@@ -79,12 +77,23 @@
                 </p>
             </div>
         </div>
+        <!-- Confirmation Modal -->
+        <ConfirmationModal
+            :show="showConfirmation"
+            :message="confirmationMessage"
+            title="Clear All Character IDs"
+            confirmText="Clear All"
+            cancelText="Cancel"
+            @confirm="confirmAction"
+            @cancel="cancelConfirmation"
+        />
     </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import GenericButton from './buttons/GenericButton.vue'
+import { ref, nextTick } from 'vue';
+import GenericButton from './buttons/GenericButton.vue';
+import ConfirmationModal from './ConfirmationModal.vue'
 
 const props = defineProps({
     getAllCharacterData: Function,
@@ -92,28 +101,32 @@ const props = defineProps({
         type: Array,
         default: () => []
     }
-})
+});
 
-const emit = defineEmits(['update:characterIds'])
+const emit = defineEmits(['update:characterIds']);
 
-const inputValue = ref('')
+const inputValue = ref('');
+const showConfirmation = ref(false)
+const confirmationMessage = ref('')
+const pendingAction = ref(null)
+const inputRef = ref(null);
 
 const handleInput = (event) => {
-    const value = event.target.value
+    const value = event.target.value;
     // Remove any character that isn't a digit or comma
-    const filtered = value.replace(/[^0-9,]/g, '')
-    inputValue.value = filtered
+    const filtered = value.replace(/[^0-9,]/g, '');
+    inputValue.value = filtered;
 }
 
 const handlePaste = (event) => {
-    event.preventDefault()
-    const paste = (event.clipboardData || window.clipboardData).getData('text')
-    const filtered = paste.replace(/[^0-9,]/g, '')
-    inputValue.value = filtered
+    event.preventDefault();
+    const paste = (event.clipboardData || window.clipboardData).getData('text');
+    const filtered = paste.replace(/[^0-9,]/g, '');
+    inputValue.value = filtered;
 }
 
-const addCharacterIds = () => {
-    if (!inputValue.value.trim()) return
+const addCharacterIds = async () => {
+    if (!inputValue.value.trim()) return;
   
     // Split by comma, trim whitespace, filter out empty strings
     const newIds = inputValue.value
@@ -123,19 +136,45 @@ const addCharacterIds = () => {
         .filter(id => !props.characterIds.includes(id)) // Avoid duplicates
   
     if (newIds.length > 0) {
-        const updatedIds = [...new Set([...props.characterIds, ...newIds])]
-        emit('update:characterIds', updatedIds)
+        const updatedIds = [...new Set([...props.characterIds, ...newIds])];
+        emit('update:characterIds', updatedIds);
+    };
+    inputValue.value = '';
+
+    // Refocus the input after the DOM updates
+    await nextTick()
+    if (inputRef.value) {
+      inputRef.value.focus()
     }
-    inputValue.value = ''
 }
 
 const removeCharacterId = (idToRemove) => {
-  const updatedIds = props.characterIds.filter(id => id !== idToRemove)
-  emit('update:characterIds', updatedIds)
+    const updatedIds = props.characterIds.filter(id => id !== idToRemove);
+    emit('update:characterIds', updatedIds);
 }
 
 const clearAllIds = () => {
-  emit('update:characterIds', [])
+    emit('update:characterIds', []);
+}
+
+// Confirmation functions
+const confirmClearAll = () => {
+  confirmationMessage.value = `Are you sure you want to clear all ${props.characterIds.length} character IDs?`
+  pendingAction.value = () => clearAllIds()
+  showConfirmation.value = true
+}
+
+const confirmAction = () => {
+  if (pendingAction.value) {
+    pendingAction.value()
+  }
+  showConfirmation.value = false
+  pendingAction.value = null
+}
+
+const cancelConfirmation = () => {
+  showConfirmation.value = false
+  pendingAction.value = null
 }
 </script>
 
@@ -150,143 +189,138 @@ const clearAllIds = () => {
 
 /* Input Section */
 .input-section {
-  margin-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
 .input-group {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
 }
 
 .text-input {
-  flex: 1;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  max-width: 500px;
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    max-width: 500px;
 }
 
 .text-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .text-input::placeholder {
-  color: #9ca3af;
+    color: #9ca3af;
 }
 
 /* ID Display Section */
 .id-display-section {
-  margin-bottom: 1rem;
+    margin-bottom: 1rem;
 }
 
 .id-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
 }
 
 .id-item {
-  display: flex;
-  align-items: center;
-  background-color: #e5e7eb;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    background-color: #e5e7eb;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    transition: all 0.2s ease;
 }
 
 .id-item:hover {
-  background-color: #d1d5db;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #d1d5db;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .id-text {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  padding: 0.25rem 0.5rem;
-  user-select: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    padding: 0.25rem 0.5rem;
+    user-select: none;
 }
 
 .delete-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background-color: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  font-size: 14px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-left: 0.5rem;
-  transition: all 0.2s ease;
-  line-height: 1;
-  padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    transition: all 0.2s ease;
+    line-height: 1;
+    padding: 0;
 }
 
 .delete-button:hover {
-  background-color: #dc2626;
-  transform: scale(1.1);
+    background-color: #dc2626;
+    transform: scale(1.1);
 }
 
 .delete-button:active {
-  transform: scale(0.95);
+    transform: scale(0.95);
 }
 
 .delete-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
 }
 
 /* Clear Section */
 .clear-section {
-  display: flex;
-  justify-content: flex-end;
+    display: flex;
+    justify-content: flex-end;
 }
 
 /* Helper Text */
 .helper-text {
-  font-size: 0.9rem;
-  color: #6b7280;
-  line-height: 1.4;
-  /* margin-top: 0.5rem; */
-  max-width: 600px;
+    font-size: 0.9rem;
+    color: #6b7280;
+    line-height: 1.4;
+    max-width: 600px;
 }
 
 /* Utility Classes */
 .block {
-  display: block;
+    display: block;
 }
 
 .text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
 }
 
 .font-medium {
-  font-weight: 500;
+    font-weight: 500;
 }
 
 .text-gray-700 {
-  color: #374151;
+    color: #374151;
 }
 
 .mb-2 {
-  margin-bottom: 0.5rem;
-}
-
-.data-button-container {
-    
+    margin-bottom: 0.5rem;
 }
 
 .data-button {
@@ -296,19 +330,85 @@ const clearAllIds = () => {
     justify-content: center;
 }
 
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  max-width: 400px;
+  width: 90%;
+  animation: modalAppear 0.2s ease-out;
+}
+
+@keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-header {
+  padding: 1.5rem 1.5rem 0 1.5rem;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.modal-body {
+  padding: 1rem 1.5rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
 /* Responsive Design */
 @media (max-width: 640px) {
-  .input-group {
-    flex-direction: column;
-    align-items: stretch;
-  }
+    .input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
   
-  .id-list {
-    flex-direction: column;
-  }
+    .id-list {
+        flex-direction: column;
+    }
+    
+    .id-item {
+        justify-content: space-between;
+    }
+
+    .modal-content {
+        margin: 1rem;
+    }
   
-  .id-item {
-    justify-content: space-between;
-  }
+    .modal-footer {
+        flex-direction: column-reverse;
+    }
 }
 </style>

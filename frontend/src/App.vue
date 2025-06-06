@@ -14,13 +14,13 @@ export default {
   },
   mounted() {
     // checks if cached file exists on server
-    this.getAllCharacterData([], false);
+    this.getAllCharacterData({}, false);
   },
   methods: {
     async getAllCharacterData(characterIds, forceUpdate) {
       try {
         const res = await axios.get(
-          `http://127.0.0.1:8998/characters`, {
+          'http://127.0.0.1:8998/characters', {
           params: {
             "force_update": forceUpdate,
             "char_ids": characterIds
@@ -46,6 +46,15 @@ export default {
       } catch(error) {
         console.log(error);
       }
+    },
+    async deleteAllCachedData() {
+      try {
+        await axios.delete('http://127.0.0.1:8998/characters')
+        this.campaignData = {}
+        this.characterData = {}
+      } catch(error) {
+        console.log(error);
+      }
     }
   }
 }
@@ -58,12 +67,13 @@ export default {
       :characterData="characterData"
       :updateCurrentCharactersData="updateCurrentCharactersData"
       :getAllCharacterData="getAllCharacterData"
+      :deleteAllCachedData="deleteAllCachedData"
     />
   </div>
 </template>
 
 <style>
 body {
-  font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 }
 </style>

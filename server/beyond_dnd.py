@@ -45,6 +45,9 @@ class BeyondDnDClient:
         )
 
     def get_one_characters_data(self, char_id: str, force_update: bool = False):
+        if not char_id:
+            raise BeyondDnDAPIError(message=f"No Character ID provided.", status_code=HTTPStatus.BAD_REQUEST)
+
         if force_update:
             dungeon_data = self.__get_one_characters_data(char_id)
             self.__update_local_file_if_exists(
@@ -209,8 +212,10 @@ class BeyondDnDClient:
         custom_counts = {}
         for item in inventory_items:
             item_data = item.get('definition', {})
-            name = item_data.get('name')
-            if not name:
+            name = item_data.get('name', '')
+            if name.startswith(SPELL_COMPONENT_PREFIX):
+                continue
+            if not name or len(name) < 1:
                 # DON'T WASTE MY TIME POINTLESS ITEM OR BAD DATA
                 continue
             subtype = item_data.get('subType')

@@ -99,3 +99,24 @@ button {
   font-family: inherit;
 }
 </style>
+
+<!-- .smc-note p{
+  padding: 0px;
+  font-size: x-small;
+  align-self: auto;
+  margin: 0px;
+}
+
+.custom-title{
+  margin-bottom: 0px;
+}
+<div class="">
+  <h3 class="text-lg font-semibold text-gray-800 custom-title">Custom Spell Material Components</h3>
+  <div class="smc-note flex">
+    <p class="px-6 py-3 text-left text-xs text-gray-500">(Expected custom item naming format: "SMC:Diamond_Dust:500GP")</p>
+  </div>
+</div>
+<svg class="w-5 h-5 alight-right" :class="{ 'transform rotate-90': showCustomItems }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+</svg>
+          </button> -->
