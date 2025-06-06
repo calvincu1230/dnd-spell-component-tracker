@@ -268,7 +268,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='DnDSpellTracker',
+    name='DnDSpellTracker_Windows',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -329,7 +329,7 @@ exe = EXE(
             print("✓ Executable built successfully")
 
             # Find the executable
-            exe_name = "DnDSpellTracker.exe"
+            exe_name = "DnDSpellTracker_Windows.exe"
             exe_path = self.dist_dir / exe_name
 
             if exe_path.exists():
@@ -351,14 +351,14 @@ exe = EXE(
         """Create a distribution package with the executable and instructions"""
         print("\nCreating Windows distribution package...")
 
-        package_dir = self.project_root / "DnDSpellTracker_Windows"
+        package_dir = self.project_root / "DnDSpellTracker"
         if package_dir.exists():
             shutil.rmtree(package_dir)
 
         package_dir.mkdir()
 
         # Copy executable
-        exe_name = "DnDSpellTracker.exe"
+        exe_name = "DnDSpellTracker_Windows.exe"
         exe_source = self.dist_dir / exe_name
         exe_dest = package_dir / exe_name
 

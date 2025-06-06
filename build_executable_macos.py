@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 
-class ExecutableBuilder:
+class MacOSExecutableBuilder:
     def __init__(self):
         self.project_root = Path(__file__).parent
         self.frontend_dir = self.project_root / "frontend"
@@ -104,7 +104,7 @@ class ExecutableBuilder:
         return True
 
     def create_spec_file(self):
-        """Create PyInstaller spec file"""
+        """Create PyInstaller spec file optimized for macOS"""
         spec_content = '''# -*- mode: python ; coding: utf-8 -*-
 
 import os
@@ -252,7 +252,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='DnDSpellTracker',
+    name='DnDSpellTracker_MacOS',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -268,11 +268,11 @@ exe = EXE(
 )
 '''
 
-        spec_file = self.project_root / "dnd_spell_tracker.spec"
+        spec_file = self.project_root / "dnd_spell_tracker_macos.spec"
         with open(spec_file, 'w') as f:
             f.write(spec_content)
 
-        print("✓ Spec file created")
+        print("✓ macOS spec file created")
         return spec_file
 
     def build_executable(self):
@@ -309,20 +309,15 @@ exe = EXE(
             print("✓ Executable built successfully")
 
             # Find the executable
-            if sys.platform == "win32":
-                exe_name = "DnDSpellTracker.exe"
-            else:
-                exe_name = "DnDSpellTracker"
-
+            exe_name = "DnDSpellTracker_MacOS"  # No .exe on macOS
             exe_path = self.dist_dir / exe_name
             if exe_path.exists():
                 print(f"✓ Executable created: {exe_path}")
                 print(f"✓ File size: {exe_path.stat().st_size / (1024 * 1024):.1f} MB")
 
-                # Make executable on Unix systems
-                if sys.platform != "win32":
-                    os.chmod(exe_path, 0o755)
-                    print("✓ Set executable permissions")
+                # Make executable on macOS
+                os.chmod(exe_path, 0o755)
+                print("✓ Set executable permissions")
 
                 return True
             else:
@@ -338,7 +333,7 @@ exe = EXE(
 
     def create_distribution_package(self):
         """Create a distribution package with the executable and instructions"""
-        print("\nCreating distribution package...")
+        print("\nCreating macOS distribution package...")
 
         package_dir = self.project_root / "DnDSpellTracker"
         if package_dir.exists():
@@ -347,26 +342,26 @@ exe = EXE(
         package_dir.mkdir()
 
         # Copy executable
-        if sys.platform == "win32":
-            exe_name = "DnDSpellTracker.exe"
-        else:
-            exe_name = "DnDSpellTracker"
-
+        exe_name = "DnDSpellTracker_MacOS"
         exe_source = self.dist_dir / exe_name
         exe_dest = package_dir / exe_name
 
         if exe_source.exists():
             shutil.copy2(exe_source, exe_dest)
 
+            # Ensure executable permissions
+            os.chmod(exe_dest, 0o755)
+
             # Create README
-            readme_content = f"""# DnD Spell Component Tracker
+            readme_content = f"""# DnD Spell Component Tracker - macOS
 
 ## How to Use
 
 1. Double-click on `{exe_name}` to start the application
-2. The application will automatically open in your default web browser
-3. Enter your D&D Beyond character IDs to load character data
-4. View spells and their components, inventory, and focus items
+2. If macOS shows a security warning, right-click and select "Open" 
+3. The application will automatically open in your default web browser
+4. Enter your D&D Beyond character IDs to load character data
+5. View spells and their components, inventory, and focus items
 
 ## Features
 
@@ -375,8 +370,20 @@ exe = EXE(
 - Check if a focus can replace spell components
 - Supports multiple characters from the same campaign
 
+## macOS Security Notice
+
+Since this is an unsigned application, macOS Gatekeeper may prevent it from running:
+
+1. If you see "cannot be opened because it is from an unidentified developer":
+   - Right-click the executable and select "Open"
+   - Click "Open" in the dialog that appears
+2. Alternatively, you can allow it in System Preferences:
+   - Go to System Preferences > Security & Privacy > General
+   - Click "Allow Anyway" next to the blocked app message
+
 ## Requirements
 
+- macOS 10.14 or later
 - No additional software needed! This is a portable executable.
 - Internet connection required to fetch data from D&D Beyond
 - Character profiles must be set to Public on D&D Beyond
@@ -401,15 +408,15 @@ Enjoy tracking your spell components!
             with open(readme_file, 'w') as f:
                 f.write(readme_content)
 
-            print(f"✓ Distribution package created: {package_dir}")
+            print(f"✓ macOS distribution package created: {package_dir}")
             return True
 
         return False
 
     def build_all(self):
         """Run the complete build process"""
-        print("DnD Spell Component Tracker - Build Process")
-        print("=" * 50)
+        print("DnD Spell Component Tracker - macOS Build Process")
+        print("=" * 55)
 
         if not self.check_requirements():
             return False
@@ -426,20 +433,20 @@ Enjoy tracking your spell components!
         if not self.create_distribution_package():
             return False
 
-        print("\n" + "=" * 50)
-        print("✓ Build completed successfully!")
-        print("✓ Your executable is ready for distribution")
+        print("\n" + "=" * 55)
+        print("✓ macOS build completed successfully!")
+        print("✓ Your macOS executable is ready for distribution")
         print(f"✓ Distribution package: {self.project_root / 'DnDSpellTracker'}")
 
         return True
 
 
 def main():
-    builder = ExecutableBuilder()
+    builder = MacOSExecutableBuilder()
     success = builder.build_all()
 
     if not success:
-        print("\n✗ Build failed!")
+        print("\n✗ macOS build failed!")
         sys.exit(1)
 
 

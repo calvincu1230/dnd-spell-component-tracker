@@ -208,5 +208,5 @@ coverage
 *.tsbuildinfo
 
 # Project executable outputs
-/DnDSpellTracker/
-DnDSpellTracker.zip
+DnDSpellTracker_macOS/
+DnDSpellTracker*
