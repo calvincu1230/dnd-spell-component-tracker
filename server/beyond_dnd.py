@@ -25,7 +25,6 @@ class BeyondDnDAPIError(Exception):
 
 
 class BeyondDnDClient:
-    # TODO: If useful, in future can store character ids by campaign_id to manage multiple campaigns.
     # Added custom item param in case, to prevent changes in future if we use homebrew/custom
     _BASE_URL = 'https://character-service.dndbeyond.com/character/v5/character/{}?includeCustomItems=true'
     _LOCAL_CHARACTER_DATA_FILE = 'local_character_data.json'
@@ -82,14 +81,18 @@ class BeyondDnDClient:
 
     def __get_all_character_data(self, char_ids: List[str]) -> dict:
         all_character_data = {}
-        campaign_data = None
+        campaign_data = {}
         for char_id in char_ids:
             resp = self.__get_bdnd_character_data(char_id)
             resp_data = resp.get('data', {})
-            if not campaign_data:
-                # only need to get this data once, ignore once successful
-                campaign_data = self.__extract_campaign_metadata(resp_data.get('campaign'))
+            campaign = resp_data.get('campaign', {})
+            campaign_id = campaign.get('id')
+            if campaign_id and campaign_id not in campaign_data:
+                extracted_metadata = self.__extract_campaign_metadata(resp_data.get('campaign'))
+                if extracted_metadata:
+                    campaign_data[campaign_id] = extracted_metadata
             character_data = self.__format_character_data(resp_data, char_id)
+            character_data['campaignId'] = str(campaign_id)
             all_character_data[char_id] = character_data
         return {
             "characters": all_character_data,
@@ -152,6 +155,7 @@ class BeyondDnDClient:
         counted_items, counted_custom_items, focus = self.__count_inventory_items(inventory_items, custom_items)
         spells = self.__build_character_spell_list(char_data)
         return {
+            # need to add campaignId
             'name': name,
             'spells': spells,
             'custom_items': counted_custom_items,

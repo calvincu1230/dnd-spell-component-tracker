@@ -8,26 +8,33 @@
     <!-- Campaign Header -->
     <div class="mb-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-lg">
       <div class="flex justify-between items-start">
-        <h1 class="text-3xl font-bold">{{ campaignData?.name || 'Derngerns ern Dergens' }}</h1>
+        <h1 class="text-3xl font-bold">{{ selectedCampaign?.name || 'Derngerns ern Dergens' }}</h1>
         <div class="text-right text-sm opacity-90">
-          <p v-if="campaignData?.description" class="mb-1">{{ campaignData.description }}</p>
-          <p v-if="campaignData?.dmUsername">DM: {{ campaignData.dmUsername }}</p>
+          <p v-if="selectedCampaign?.description" class="mb-1">{{ selectedCampaign.description }}</p>
+          <p v-if="selectedCampaign?.dmUsername">DM: {{ selectedCampaign.dmUsername }}</p>
         </div>
       </div>
     </div>
-
-    <!-- Character ID Input Section - Only show when no character is selected -->
-    <div class="text-center text-gray-500 py-8" v-if="!selectedCharacter">
-        <CharacterIdInput
-          :getAllCharacterData="props.getAllCharacterData"
-          :character-ids="characterIds"
-          @update:character-ids="updateCharacterIds"
-        />
-    </div>
-
-    <!-- Character Selector -->
-    <div class="mb-6 button-container" v-if="selectedCharacter && Object.keys(characterData).length > 0">
+    
+    <!-- Campaign & Character Selectors -->
+    <div class="mb-6 button-container" v-if="campaignData && Object.keys(campaignData).length > 0">
       <ul class="button-list">
+        <!-- Campaign Selector -->
+        <li>
+          <label class="block text-sm font-medium themed-text-secondary mb-2">
+            Select Campaign:
+          </label>
+          <select 
+            v-model="selectedCampaignId"
+            class="themed-select block w-64 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+          <option key="all" value="all">All Campaigns</option>
+          <option v-for="id in computedCampaignIds" :key="id" :value="id">
+            {{ campaignData[id].name }}
+          </option>
+        </select>
+        </li>
+        <!-- Character Selector -->
         <li>
           <label class="block text-sm font-medium themed-text-secondary mb-2">
             Select Character:
@@ -36,15 +43,16 @@
             v-model="selectedCharacterId"
             class="themed-select block w-64 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option v-for="id in computedCharacterIds" :key="id" :value="id">
-              {{ characterData[id]?.name || `Character ${id}` }}
+            <option value="-" disabled selected>Select an item...</option>
+            <option v-for="id in computedFilteredCharacterIds" :key="id" :value="id">
+              {{ characterData[id].name }}
             </option>
           </select>
         </li>
         <li>
           <GenericButton
-            :onClick="() => getAllCharacterData(computedCharacterIds, true)"
-            text="Get All Character Data"
+            :onClick="() => getAllCharacterData(computedAllCharacterIds, true)"
+            text="Update All Characters"
           />
         </li>
         <li>
@@ -56,11 +64,20 @@
         <li>
           <GenericButton
             :onClick="showDeleteAllConfirmation"
-            text="Delete All Cached Data"
+            text="Delete All Data"
             variant="danger"
           />
         </li>
       </ul>
+    </div>
+
+    <!-- Character ID Input Section - Only show when no data is available -->
+    <div class="text-center text-gray-500 py-8" v-else>
+        <CharacterIdInput
+          :getAllCharacterData="props.getAllCharacterData"
+          :character-ids="characterIds"
+          @update:character-ids="updateCharacterIds"
+        />
     </div>
 
     <!-- Character Display -->
@@ -246,7 +263,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import checkMark from '../assets/green-checkmark.png';
 import xMark from '../assets/red-x-icon.png';
 import GenericButton from '../components/buttons/GenericButton.vue';
@@ -266,14 +283,27 @@ const props = defineProps({
 const showInventory = ref(false);
 const showCustomItems = ref(false);
 const showFocus = ref(false);
-const selectedCharacterId = ref('');
+const selectedCharacterId = ref("-");
+const selectedCampaignId = ref('all');
 const characterIds = ref([]);
 const showDeleteConfirmation = ref(false);
 
-// Computed properties
-const computedCharacterIds = computed(() => {
-  return props.characterData ? Object.keys(props.characterData) : [];
+// // Computed properties
+const computedFilteredCharacterIds = computed(() => {
+  const allIds = props.characterData ? Object.keys(props.characterData) : [];
+  if (selectedCampaignId.value === null || selectedCampaignId.value === 'all') return allIds;
+  return allIds.filter(filterCharacterIdsByCampaignId)
+})
+
+const computedCampaignIds = computed(() => {
+  return props.campaignData ? Object.keys(props.campaignData) : [];
 });
+
+// Filter characters based on selected campaign
+const filterCharacterIdsByCampaignId = (id) => {
+  const character = props.characterData[id];
+  return character.campaignId === selectedCampaignId.value;
+};
 
 const updateCharacterIds = (newIds) => {
   characterIds.value = newIds;
@@ -281,7 +311,14 @@ const updateCharacterIds = (newIds) => {
 
 const selectedCharacter = computed(() => {
   if (!props.characterData || !selectedCharacterId.value) return null;
+  
   return props.characterData[selectedCharacterId.value];
+})
+
+const selectedCampaign = computed(() => {
+  if (!props.campaignData || !selectedCampaignId.value) return null;
+  if (selectedCampaign.value === 'all') return null;
+  return props.campaignData[selectedCampaignId.value];
 })
 
 // Confirmation modal functions
@@ -300,12 +337,32 @@ const handleDeleteAllCachedData = () => {
   hideDeleteConfirmation()
 }
 
-// Watch for character data changes and set first character as selected
-watch(() => props.characterData, (newData) => {
-  if (newData && Object.keys(newData).length > 0 && !selectedCharacterId.value) {
-    selectedCharacterId.value = Object.keys(newData)[0];
-  }
-}, { immediate: true });
+// // Watch for campaign selection changes
+// watch(selectedCampaignId, () => {
+//   // When campaign changes, update character selection to first available character
+//   if (filteredCharacterIds.value.length > 0) {
+//     selectedCharacterId.value = filteredCharacterIds.value[0];
+//   } else {
+//     selectedCharacterId.value = '';
+//   }
+// });
+
+// Watch filtered character IDs to ensure valid selection
+// watch(filteredCharacterIds, (newFilteredIds) => {
+//   console.log(`Current Filter Ids: ${filteredCharacterIds.value}\nNew Ids: ${newFilteredIds}`)
+//   if (newFilteredIds.length > 0 && !newFilteredIds.includes(selectedCharacterId.value)) {
+//     selectedCharacterId.value = newFilteredIds[0];
+//   } else if (newFilteredIds.length === 0) {
+//     selectedCharacterId.value = null;
+//   }
+// });
+
+onMounted(() => {
+  // selectedCampaignId.value = 'all'
+  // selectedCharacterId.value = null;
+  // selectedCharacter.value = null
+  // filterCharacterIdsByCampaignId('all')
+})
 </script>
 
 <style scoped>
@@ -606,7 +663,7 @@ tr:hover {
 }
 
 .bg-yellow-100 {
-  background-color: darkgoldenrod;
+  background-color: #B8860B;
 }
 
 /* Responsive Design */
