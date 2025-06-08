@@ -35,6 +35,11 @@ class BeyondDnDClient:
             if character_data:
                 # return whatever data was previously saved
                 return character_data
+            if not char_ids or len(char_ids) == 0:
+                raise BeyondDnDAPIError(
+                    "No Character Ids proviced and no cached data found.",
+                    status_code=HTTPStatus.BAD_REQUEST
+                )
         dungeon_data = self.__get_all_character_data(char_ids)
         if dungeon_data:
             self.__save_local_file(dungeon_data, self._LOCAL_CHARACTER_DATA_FILE)

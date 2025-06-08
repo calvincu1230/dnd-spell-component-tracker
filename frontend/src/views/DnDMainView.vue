@@ -17,7 +17,7 @@
     </div>
     
     <!-- Campaign & Character Selectors -->
-    <div class="mb-6 button-container" v-if="campaignData && Object.keys(campaignData).length > 0">
+    <div class="mb-6 button-container">
       <ul class="button-list">
         <!-- Campaign Selector -->
         <li>
@@ -43,7 +43,7 @@
             v-model="selectedCharacterId"
             class="themed-select block w-64 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="-" disabled selected>Select an item...</option>
+            <option value="-" disabled>Select a character...</option>
             <option v-for="id in computedFilteredCharacterIds" :key="id" :value="id">
               {{ characterData[id].name }}
             </option>
@@ -63,21 +63,18 @@
         </li>
         <li>
           <GenericButton
+            :onClick="showAddCharacterModal"
+            text="Add Character(s)"
+          />
+        </li>
+        <li>
+          <GenericButton
             :onClick="showDeleteAllConfirmation"
             text="Delete All Data"
             variant="danger"
           />
         </li>
       </ul>
-    </div>
-
-    <!-- Character ID Input Section - Only show when no data is available -->
-    <div class="text-center text-gray-500 py-8" v-else>
-        <CharacterIdInput
-          :getAllCharacterData="props.getAllCharacterData"
-          :character-ids="characterIds"
-          @update:character-ids="updateCharacterIds"
-        />
     </div>
 
     <!-- Character Display -->
@@ -259,6 +256,25 @@
       @confirm="handleDeleteAllCachedData"
       @cancel="hideDeleteConfirmation"
     />
+    <!-- Add Character Modal -->
+    <div v-if="showCharacterInputModal" class="modal-overlay" @click="hideCharacterInputModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">Add New Character(s)</h3>
+          <button @click="hideCharacterInputModal" class="close-button">×</button>
+        </div>
+        <div class="modal-body">
+          <!-- Character ID Input Section - Only show when no data is available -->
+          <CharacterIdInput
+            :getAllCharacterData="props.getAllCharacterData"
+            :hideCharacterInputModal="hideCharacterInputModal"
+            :character-ids="characterIds"
+            :currentCharIds="computedCharacterIds"
+            @update:character-ids="updateCharacterIds"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -287,6 +303,9 @@ const selectedCharacterId = ref("-");
 const selectedCampaignId = ref('all');
 const characterIds = ref([]);
 const showDeleteConfirmation = ref(false);
+const showCharacterInputModal  = ref(false)
+const pendingNewCharacterIds = ref([])
+const modelErrorMessage = ref(null)
 
 // // Computed properties
 const computedFilteredCharacterIds = computed(() => {
@@ -299,14 +318,22 @@ const computedCampaignIds = computed(() => {
   return props.campaignData ? Object.keys(props.campaignData) : [];
 });
 
+const computedCharacterIds = computed(() => {
+  return props.campaignData ? Object.keys(props.characterData) : [];
+})
+
 // Filter characters based on selected campaign
 const filterCharacterIdsByCampaignId = (id) => {
   const character = props.characterData[id];
   return character.campaignId === selectedCampaignId.value;
 };
 
-const updateCharacterIds = (newIds) => {
-  characterIds.value = newIds;
+const updateCharacterIds = (ids) => {
+  const allIds = props.characterData ? Object.keys(props.characterData) : [];
+  const newIds = ids.filter(id => {
+    return !allIds.includes(id);
+  })
+  characterIds.value = [...characterIds.value, ...newIds];
 }
 
 const selectedCharacter = computed(() => {
@@ -335,6 +362,17 @@ const handleDeleteAllCachedData = () => {
     props.deleteAllCachedData()
   }
   hideDeleteConfirmation()
+}
+
+// Add Character modal functions
+const showAddCharacterModal = () => {
+  showCharacterInputModal.value = true
+  pendingNewCharacterIds.value = []
+}
+
+const hideCharacterInputModal = () => {
+  showCharacterInputModal.value = false
+  modelErrorMessage.value = null
 }
 </script>
 
@@ -637,6 +675,66 @@ tr:hover {
 
 .bg-yellow-100 {
   background-color: #B8860B;
+}
+
+/* Add Character Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--bg-primary);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-lg);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 1.5rem 1.5rem 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
 }
 
 /* Responsive Design */

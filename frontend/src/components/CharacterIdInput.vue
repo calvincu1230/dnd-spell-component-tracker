@@ -68,7 +68,7 @@
         <div>
             <div class="data-button">
                 <GenericButton 
-                    :onClick="() => getAllCharacterData(characterIds, true)"
+                    :onClick="() => getAllNewCharacterDataCloseModal(characterIds, true)"
                     text="Get Character Data"
                     variant="primary"
                 />
@@ -97,7 +97,12 @@ import ConfirmationModal from './ConfirmationModal.vue'
 
 const props = defineProps({
     getAllCharacterData: Function,
+    hideCharacterInputModal: Function,
     characterIds: {
+        type: Array,
+        default: () => []
+    },
+    currentCharIds: {
         type: Array,
         default: () => []
     }
@@ -175,6 +180,14 @@ const confirmAction = () => {
 const cancelConfirmation = () => {
   showConfirmation.value = false
   pendingAction.value = null
+}
+
+const getAllNewCharacterDataCloseModal = (charIds, forceUpdate) => {
+    const filteredIds = charIds.filter(id => {
+        return !props.currentCharIds.includes(id)
+    })
+    props.getAllCharacterData(filteredIds, forceUpdate)
+    props.hideCharacterInputModal()
 }
 </script>
 

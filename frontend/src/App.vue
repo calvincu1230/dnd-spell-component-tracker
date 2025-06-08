@@ -29,8 +29,8 @@ export default {
           },
           paramsSerializer: { indexes: null },
         });
-        this.characterData = res.data.characters;
-        this.campaignData = res.data.campaign;
+        this.characterData = {...this.characterData, ...res.data.characters};
+        this.campaignData = {...this.campaignData, ...res.data.campaign};
       } catch(error) {
         console.error(error);
       };
