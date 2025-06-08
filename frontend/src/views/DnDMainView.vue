@@ -263,7 +263,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import checkMark from '../assets/green-checkmark.png';
 import xMark from '../assets/red-x-icon.png';
 import GenericButton from '../components/buttons/GenericButton.vue';
@@ -336,33 +336,6 @@ const handleDeleteAllCachedData = () => {
   }
   hideDeleteConfirmation()
 }
-
-// // Watch for campaign selection changes
-// watch(selectedCampaignId, () => {
-//   // When campaign changes, update character selection to first available character
-//   if (filteredCharacterIds.value.length > 0) {
-//     selectedCharacterId.value = filteredCharacterIds.value[0];
-//   } else {
-//     selectedCharacterId.value = '';
-//   }
-// });
-
-// Watch filtered character IDs to ensure valid selection
-// watch(filteredCharacterIds, (newFilteredIds) => {
-//   console.log(`Current Filter Ids: ${filteredCharacterIds.value}\nNew Ids: ${newFilteredIds}`)
-//   if (newFilteredIds.length > 0 && !newFilteredIds.includes(selectedCharacterId.value)) {
-//     selectedCharacterId.value = newFilteredIds[0];
-//   } else if (newFilteredIds.length === 0) {
-//     selectedCharacterId.value = null;
-//   }
-// });
-
-onMounted(() => {
-  // selectedCampaignId.value = 'all'
-  // selectedCharacterId.value = null;
-  // selectedCharacter.value = null
-  // filterCharacterIdsByCampaignId('all')
-})
 </script>
 
 <style scoped>
