@@ -17,15 +17,17 @@
     </div>
     
     <!-- Campaign & Character Selectors -->
-    <div class="mb-6 button-container">
-      <ul class="button-list">
+    <div class="mb-6 controls-container">
+      <!-- Dropdowns Row -->
+      <div class="dropdowns-row">
         <!-- Campaign Selector -->
-        <li>
+        <div class="dropdown-item">
           <label class="block text-sm font-medium themed-text-secondary mb-2">
             Select Campaign:
           </label>
           <select 
             v-model="selectedCampaignId"
+            @change="handleCampaignChange"
             class="themed-select block w-64 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
           <option key="all" value="all">All Campaigns</option>
@@ -33,9 +35,9 @@
             {{ campaignData[id].name }}
           </option>
         </select>
-        </li>
+        </div>
         <!-- Character Selector -->
-        <li>
+        <div class="dropdown-item">
           <label class="block text-sm font-medium themed-text-secondary mb-2">
             Select Character:
           </label>
@@ -48,33 +50,31 @@
               {{ characterData[id].name }}
             </option>
           </select>
-        </li>
-        <li>
-          <GenericButton
-            :onClick="() => getAllCharacterData(computedAllCharacterIds, true)"
-            text="Update All Characters"
-          />
-        </li>
-        <li>
-          <GenericButton
-            :onClick="() => updateCurrentCharactersData(selectedCharacterId, true)"
-            text="Update Current Character"
-          />
-        </li>
-        <li>
-          <GenericButton
-            :onClick="showAddCharacterModal"
-            text="Add Character(s)"
-          />
-        </li>
-        <li>
-          <GenericButton
-            :onClick="showDeleteAllConfirmation"
-            text="Delete All Data"
-            variant="danger"
-          />
-        </li>
-      </ul>
+        </div>
+      </div>
+      
+      <!-- Buttons Row -->
+      <div class="buttons-row">
+        <GenericButton
+          :onClick="() => getAllCharacterData(characterIds, true)"
+          :disabled="Object.keys(props.characterData).length === 0"
+          text="Update All Characters"
+        />
+        <GenericButton
+          :onClick="() => updateCurrentCharactersData(selectedCharacterId, true)"
+          text="Update Current Character"
+          :disabled="selectedCharacterId === '-'"
+        />
+        <GenericButton
+          :onClick="showAddCharacterModal"
+          text="Add Character(s)"
+        />
+        <GenericButton
+          :onClick="showDeleteAllConfirmation"
+          text="Delete All Data"
+          variant="danger"
+        />
+      </div>
     </div>
 
     <!-- Character Display -->
@@ -268,8 +268,8 @@
           <CharacterIdInput
             :getAllCharacterData="props.getAllCharacterData"
             :hideCharacterInputModal="hideCharacterInputModal"
-            :character-ids="characterIds"
-            :currentCharIds="computedCharacterIds"
+            :character-ids="pendingNewCharacterIds"
+            :currentCharIds="characterIds"
             @update:character-ids="updateCharacterIds"
           />
         </div>
@@ -288,11 +288,22 @@ import ConfirmationModal from '../components/ConfirmationModal.vue';
 import ThemeToggleButton from '../components/buttons/ThemeToggleButton.vue';
 
 const props = defineProps({
-  campaignData: Object,
-  characterData: Object,
+  campaignData: {
+    type: Object,
+    default: () => ({})
+  },
+  characterData: {
+    type: Object,
+    default: () => ({})
+  },
   updateCurrentCharactersData: Function,
   getAllCharacterData: Function,
   deleteAllCachedData: Function,
+});
+
+const computedAllIds = computed(() => {
+  const ids = props.characterData ? Object.keys(props.characterData) : [];
+  return ids
 });
 
 // Reactive state
@@ -301,7 +312,7 @@ const showCustomItems = ref(false);
 const showFocus = ref(false);
 const selectedCharacterId = ref("-");
 const selectedCampaignId = ref('all');
-const characterIds = ref([]);
+const characterIds = ref(computedAllIds);
 const showDeleteConfirmation = ref(false);
 const showCharacterInputModal  = ref(false)
 const pendingNewCharacterIds = ref([])
@@ -311,19 +322,15 @@ const modelErrorMessage = ref(null)
 const computedFilteredCharacterIds = computed(() => {
   const allIds = props.characterData ? Object.keys(props.characterData) : [];
   if (selectedCampaignId.value === null || selectedCampaignId.value === 'all') return allIds;
-  return allIds.filter(filterCharacterIdsByCampaignId)
+  return allIds.filter(characterInSelectedCampaign)
 })
 
 const computedCampaignIds = computed(() => {
   return props.campaignData ? Object.keys(props.campaignData) : [];
 });
 
-const computedCharacterIds = computed(() => {
-  return props.campaignData ? Object.keys(props.characterData) : [];
-})
-
 // Filter characters based on selected campaign
-const filterCharacterIdsByCampaignId = (id) => {
+const characterInSelectedCampaign = (id) => {
   const character = props.characterData[id];
   return character.campaignId === selectedCampaignId.value;
 };
@@ -333,12 +340,11 @@ const updateCharacterIds = (ids) => {
   const newIds = ids.filter(id => {
     return !allIds.includes(id);
   })
-  characterIds.value = [...characterIds.value, ...newIds];
+  pendingNewCharacterIds.value = [...pendingNewCharacterIds.value, ...newIds];
 }
 
 const selectedCharacter = computed(() => {
   if (!props.characterData || !selectedCharacterId.value) return null;
-  
   return props.characterData[selectedCharacterId.value];
 })
 
@@ -347,6 +353,10 @@ const selectedCampaign = computed(() => {
   if (selectedCampaign.value === 'all') return null;
   return props.campaignData[selectedCampaignId.value];
 })
+
+const handleCampaignChange = () => {
+  selectedCharacterId.value = '-'
+}
 
 // Confirmation modal functions
 const showDeleteAllConfirmation = () => {
@@ -737,11 +747,49 @@ tr:hover {
   padding: 1rem 1.5rem 1.5rem 1.5rem;
 }
 
+/* Controls layout */
+.controls-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dropdowns-row {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-end;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.dropdown-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.buttons-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 /* Responsive Design */
 @media (max-width: 640px) {
   .theme-toggle-container {
     top: 0.5rem;
     right: 0.5rem;
+  }
+  
+  .dropdowns-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .buttons-row {
+    flex-direction: column;
+    align-items: center;
   }
 }
 </style>

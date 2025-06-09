@@ -35,11 +35,11 @@ class BeyondDnDClient:
             if character_data:
                 # return whatever data was previously saved
                 return character_data
-            if not char_ids or len(char_ids) == 0:
-                raise BeyondDnDAPIError(
-                    "No Character Ids proviced and no cached data found.",
-                    status_code=HTTPStatus.BAD_REQUEST
-                )
+        if not char_ids or len(char_ids) == 0:
+            raise BeyondDnDAPIError(
+                "No Character Ids proviced and no cached data found.",
+                status_code=HTTPStatus.BAD_REQUEST
+            )
         dungeon_data = self.__get_all_character_data(char_ids)
         if dungeon_data:
             self.__save_local_file(dungeon_data, self._LOCAL_CHARACTER_DATA_FILE)
@@ -54,9 +54,7 @@ class BeyondDnDClient:
 
         if force_update:
             dungeon_data = self.__get_one_characters_data(char_id)
-            self.__update_local_file_if_exists(
-                {'characters': {char_id: dungeon_data}}, self._LOCAL_CHARACTER_DATA_FILE
-            )
+            self.__update_local_file_if_exists(dungeon_data, self._LOCAL_CHARACTER_DATA_FILE)
             return dungeon_data
         else:
             # Check if the data exists locally
@@ -80,9 +78,20 @@ class BeyondDnDClient:
             shutil.rmtree(directory_path)
 
     def __get_one_characters_data(self, char_id: str) -> dict:
+        campaign_data = {}
         resp = self.__get_bdnd_character_data(char_id)
         resp_data = resp.get('data', {})
-        return self.__format_character_data(resp_data, char_id)
+        campaign = resp_data.get('campaign', {})
+        campaign_id = campaign.get('id')
+        character_data = self.__format_character_data(resp_data, char_id)
+        extracted_metadata = self.__extract_campaign_metadata(resp_data.get('campaign'))
+        if extracted_metadata:
+            campaign_data[campaign_id] = extracted_metadata
+            character_data['campaignId'] = str(campaign_id)
+        return {
+            "characters": {char_id: character_data},
+            "campaigns": campaign_data
+        }
 
     def __get_all_character_data(self, char_ids: List[str]) -> dict:
         all_character_data = {}
@@ -101,7 +110,7 @@ class BeyondDnDClient:
             all_character_data[char_id] = character_data
         return {
             "characters": all_character_data,
-            "campaign": campaign_data
+            "campaigns": campaign_data
         }
 
     @staticmethod
@@ -204,7 +213,9 @@ class BeyondDnDClient:
                 'componentsHaveCost': False,
                 'focusWillWork': True,  # This is just set for true, nothing is needed but whatever
             }
+        # Are there any other words used to designate the use of items when spell is cast
         found_consume_text = CONSUME_TEXT.lower() in description.lower()
+        # This needs to be updated but need more info on what I can expect data wise (other currencies / formats)
         found_gp_cost_text = GP_COST_TEXT.lower() in description.lower()
         return {
             'name': name,

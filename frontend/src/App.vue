@@ -16,10 +16,13 @@ export default {
   },
   mounted() {
     // checks if cached file exists on server
-    this.getAllCharacterData({}, false);
+    const allIds = this.characterData ? Object.keys(this.characterData) : [];
+    this.getAllCharacterData(allIds, false);
   },
   methods: {
     async getAllCharacterData(characterIds, forceUpdate) {
+      if (characterIds === undefined) return {};
+      if (characterIds.length === 0 && forceUpdate) return {};
       try {
         const res = await axios.get(
           'http://127.0.0.1:8998/characters', {
@@ -30,7 +33,7 @@ export default {
           paramsSerializer: { indexes: null },
         });
         this.characterData = {...this.characterData, ...res.data.characters};
-        this.campaignData = {...this.campaignData, ...res.data.campaign};
+        this.campaignData = {...this.campaignData, ...res.data.campaigns};
       } catch(error) {
         console.error(error);
       };
@@ -43,7 +46,8 @@ export default {
             paramsSerializer: { indexes: null },
           })
         if (res.data) {
-          this.characterData[characterId] = res.data
+          this.characterData = {...this.characterData, ...res.data.characters};
+          this.campaignData = {...this.campaignData, ...res.data.campaigns};
         }
       } catch(error) {
         console.log(error);

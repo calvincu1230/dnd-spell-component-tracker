@@ -5,6 +5,7 @@ from fastapi import FastAPI, Query
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 
 from beyond_dnd import BeyondDnDClient, BeyondDnDAPIError
 
@@ -19,6 +20,20 @@ app.add_middleware(
 )
 
 beyond = BeyondDnDClient()
+
+
+@app.exception_handler(RequestValidationError)
+def testing_stuff(request: Request, exc: RequestValidationError):
+    formatted_errors = []
+    for error in exc.errors():
+        formatted_errors.append({
+            "field": ".".join(map(str, error["loc"])),
+            "message": error["msg"],
+        })
+    return JSONResponse(
+        status_code=422,
+        content={"errors": formatted_errors},
+    )
 
 
 @app.get('/characters')

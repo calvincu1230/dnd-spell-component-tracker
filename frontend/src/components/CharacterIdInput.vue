@@ -138,7 +138,7 @@ const addCharacterIds = async () => {
         .split(',')
         .map(id => id.trim())
         .filter(id => id.length > 0)
-        .filter(id => !props.characterIds.includes(id)) // Avoid duplicates
+        .filter(id => !props.characterIds.includes(id) && id !== '-') // Avoid duplicates
   
     if (newIds.length > 0) {
         const updatedIds = [...new Set([...props.characterIds, ...newIds])];
