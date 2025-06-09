@@ -56,7 +56,7 @@
       <!-- Buttons Row -->
       <div class="buttons-row">
         <GenericButton
-          :onClick="() => getAllCharacterData(characterIds, true)"
+          :onClick="() => getAllCharacterData(Object.keys(characterIds), true)"
           :disabled="Object.keys(props.characterData).length === 0"
           text="Update All Characters"
         />
@@ -67,7 +67,8 @@
         />
         <GenericButton
           :onClick="showAddCharacterModal"
-          text="Add Character(s)"
+          text="Add/Remove Character(s)"
+          variant="warning"
         />
         <GenericButton
           :onClick="showDeleteAllConfirmation"
@@ -259,18 +260,13 @@
     <!-- Add Character Modal -->
     <div v-if="showCharacterInputModal" class="modal-overlay" @click="hideCharacterInputModal">
       <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">Add New Character(s)</h3>
-          <button @click="hideCharacterInputModal" class="close-button">×</button>
-        </div>
         <div class="modal-body">
           <!-- Character ID Input Section - Only show when no data is available -->
           <CharacterIdInput
             :getAllCharacterData="props.getAllCharacterData"
             :hideCharacterInputModal="hideCharacterInputModal"
-            :character-ids="pendingNewCharacterIds"
-            :currentCharIds="characterIds"
-            @update:character-ids="updateCharacterIds"
+            :deleteCharacterById="props.deleteCharacterById"
+            v-model:currentCharIds="characterIds"
           />
         </div>
       </div>
@@ -279,6 +275,8 @@
 </template>
 
 <script setup>
+// TODO: Fix the Add Character remove one/clear all id funcs.
+// comment out the script entrypoint in server.py
 import { ref, computed } from 'vue';
 import checkMark from '../assets/green-checkmark.png';
 import xMark from '../assets/red-x-icon.png';
@@ -299,12 +297,23 @@ const props = defineProps({
   updateCurrentCharactersData: Function,
   getAllCharacterData: Function,
   deleteAllCachedData: Function,
+  deleteCharacterById: Function,
 });
 
-const computedAllIds = computed(() => {
-  const ids = props.characterData ? Object.keys(props.characterData) : [];
-  return ids
-});
+const characterIds = computed({
+  get: () => {
+    const ids = Object.keys(props.characterData) || [];
+    if (ids.length == 0) return {};
+    const idMap = {}
+    ids.forEach(id =>{
+      idMap[id] = props.characterData[id].name
+    })
+    return idMap
+  },
+  set: (value) => {
+    return value
+  }
+})
 
 // Reactive state
 const showInventory = ref(false);
@@ -312,17 +321,15 @@ const showCustomItems = ref(false);
 const showFocus = ref(false);
 const selectedCharacterId = ref("-");
 const selectedCampaignId = ref('all');
-const characterIds = ref(computedAllIds);
 const showDeleteConfirmation = ref(false);
 const showCharacterInputModal  = ref(false)
-const pendingNewCharacterIds = ref([])
 const modelErrorMessage = ref(null)
 
 // // Computed properties
 const computedFilteredCharacterIds = computed(() => {
-  const allIds = props.characterData ? Object.keys(props.characterData) : [];
-  if (selectedCampaignId.value === null || selectedCampaignId.value === 'all') return allIds;
-  return allIds.filter(characterInSelectedCampaign)
+  // const allIds = props.characterData ? Object.keys(props.characterData) : [];
+  if (selectedCampaignId.value === null || selectedCampaignId.value === 'all') return Object.keys(characterIds.value);
+  return Object.keys(characterIds.value).filter(characterInSelectedCampaign)
 })
 
 const computedCampaignIds = computed(() => {
@@ -335,12 +342,8 @@ const characterInSelectedCampaign = (id) => {
   return character.campaignId === selectedCampaignId.value;
 };
 
-const updateCharacterIds = (ids) => {
-  const allIds = props.characterData ? Object.keys(props.characterData) : [];
-  const newIds = ids.filter(id => {
-    return !allIds.includes(id);
-  })
-  pendingNewCharacterIds.value = [...pendingNewCharacterIds.value, ...newIds];
+const handleCampaignChange = () => {
+  selectedCharacterId.value = '-'
 }
 
 const selectedCharacter = computed(() => {
@@ -353,10 +356,6 @@ const selectedCampaign = computed(() => {
   if (selectedCampaign.value === 'all') return null;
   return props.campaignData[selectedCampaignId.value];
 })
-
-const handleCampaignChange = () => {
-  selectedCharacterId.value = '-'
-}
 
 // Confirmation modal functions
 const showDeleteAllConfirmation = () => {
@@ -377,7 +376,6 @@ const handleDeleteAllCachedData = () => {
 // Add Character modal functions
 const showAddCharacterModal = () => {
   showCharacterInputModal.value = true
-  pendingNewCharacterIds.value = []
 }
 
 const hideCharacterInputModal = () => {
@@ -723,24 +721,6 @@ tr:hover {
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--text-secondary);
-  padding: 0;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-button:hover {
-  color: var(--text-primary);
 }
 
 .modal-body {

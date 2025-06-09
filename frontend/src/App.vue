@@ -61,6 +61,18 @@ export default {
       } catch(error) {
         console.log(error);
       }
+    },
+    async deleteCharacterById(characterId) {
+      if (!Object.keys(this.characterData).includes(characterId)) return;
+      try {
+        const res = await axios.delete(`http://127.0.0.1:8998/characters/${characterId}`)
+        if (res.data) {
+          this.characterData = {...this.characterData, ...res.data.characters};
+          this.campaignData = {...this.campaignData, ...res.data.campaigns};
+        }
+      } catch(error) {
+        console.log(error);
+      }
     }
   }
 }
@@ -75,6 +87,7 @@ export default {
         :updateCurrentCharactersData="updateCurrentCharactersData"
         :getAllCharacterData="getAllCharacterData"
         :deleteAllCachedData="deleteAllCachedData"
+        :deleteCharacterById="deleteCharacterById"
       />
     </div>
   </ThemeProvider>

@@ -1,39 +1,62 @@
 <template>
     <!-- CharacterIdInput.vue -->
-    <div class="character-id-input">
-
-        <!-- Character ID Display -->
-        <div v-if="props.characterIds.length > 0" class="id-display-section">
-            <h4 class="text-sm font-medium themed-text-secondary mb-2">
-            Added Character IDs ({{ props.characterIds.length }})
-            </h4>
-            <div class="id-list">
-                <div 
-                    v-for="id in props.characterIds" 
-                    :key="id" 
-                    class="id-item"
-                >
-                    <span class="id-text">{{ id }}</span>
-                    <button 
-                        @click="removeCharacterId(id)"
-                        class="delete-button"
-                        title="Remove ID"
+     <div class="clear-section">
+        <button @click="hideCharacterInputModal" class="close-button">×</button>
+     </div>
+    <div class="modal-header">
+         <!-- Current Character ID Display -->
+        <div>
+            <h3 class="modal-title">Existing Character(s):
+                <div class="id-list">
+                    <div 
+                        v-for="[id, name] of Object.entries(currentCharIds)" 
+                        :key="id" 
+                        class="id-item"
                     >
-                        ×
-                    </button>
+                        <span class="id-text">{{ name }}</span>
+                        <!-- These funcs may need special delete func for confirm modal -->
+                        <button 
+                            @click="removeCharacterId(id)"
+                            class="delete-button"
+                            title="Remove ID"
+                        >
+                            ×
+                        </button>
+                    </div>
                 </div>
-            </div>
-        
-            <!-- Clear All Button -->
-            <div class="clear-section">
-                <GenericButton 
-                    :onClick="confirmClearAll"
-                    text="Clear All"
-                    variant="outline"
-                />
-            </div>
+            </h3>
+             <!-- Pending Character ID Display -->
+            <h3 class="modal-title">Pending ID(s):
+                <!-- Pending is working fine for clearing. Might need to fix for update button -->
+                <div class="id-list">
+                    <div 
+                        v-for="id in pendingCharIds" 
+                        :key="id" 
+                        class="id-item"
+                    >
+                        <span class="id-text">{{ id }}</span>
+                        <button 
+                            @click="removeCharacterId(id)"
+                            class="delete-button"
+                            title="Remove ID"
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+                <!-- Clear All Button -->
+                <div v-if="pendingCharIds.length > 0" class="clear-section">
+                    <GenericButton 
+                        :onClick="confirmClearAllPendingIds"
+                        text="Clear All Pending IDs"
+                        variant="outline"
+                    />
+                </div>
+            </h3>
+            
         </div>
-
+    </div>
+    <div class="character-id-input">
         <!-- Input Section -->
         <div class="input-section">
             <div class="input-group">
@@ -68,7 +91,8 @@
         <div>
             <div class="data-button">
                 <GenericButton 
-                    :onClick="() => getAllNewCharacterDataCloseModal(characterIds, true)"
+                    :onClick="() => getAllNewCharacterDataCl(pendingCharIds, true)"
+                    :disabled="pendingCharIds.length === 0"
                     text="Get Character Data"
                     variant="primary"
                 />
@@ -81,7 +105,7 @@
         <ConfirmationModal
             :show="showConfirmation"
             :message="confirmationMessage"
-            title="Clear All Character IDs"
+            title="Clear All Pending Character IDs"
             confirmText="Clear All"
             cancelText="Cancel"
             @confirm="confirmAction"
@@ -91,29 +115,25 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, defineModel } from 'vue';
 import GenericButton from './buttons/GenericButton.vue';
-import ConfirmationModal from './ConfirmationModal.vue'
+import ConfirmationModal from './ConfirmationModal.vue';
 
 const props = defineProps({
     getAllCharacterData: Function,
     hideCharacterInputModal: Function,
-    characterIds: {
-        type: Array,
-        default: () => []
-    },
-    currentCharIds: {
-        type: Array,
-        default: () => []
-    }
+    deleteCharacterById: Function,
 });
 
-const emit = defineEmits(['update:characterIds']);
-
+const currentCharIds = defineModel('currentCharIds', {
+  type: Object,
+  default: () => {},
+});
+const pendingCharIds = ref([]);
 const inputValue = ref('');
-const showConfirmation = ref(false)
-const confirmationMessage = ref('')
-const pendingAction = ref(null)
+const showConfirmation = ref(false);
+const confirmationMessage = ref('');
+const pendingAction = ref(null);
 const inputRef = ref(null);
 
 const handleInput = (event) => {
@@ -121,14 +141,14 @@ const handleInput = (event) => {
     // Remove any character that isn't a digit or comma
     const filtered = value.replace(/[^0-9,]/g, '');
     inputValue.value = filtered;
-}
+};
 
 const handlePaste = (event) => {
     event.preventDefault();
     const paste = (event.clipboardData || window.clipboardData).getData('text');
     const filtered = paste.replace(/[^0-9,]/g, '');
     inputValue.value = filtered;
-}
+};
 
 const addCharacterIds = async () => {
     if (!inputValue.value.trim()) return;
@@ -138,57 +158,64 @@ const addCharacterIds = async () => {
         .split(',')
         .map(id => id.trim())
         .filter(id => id.length > 0)
-        .filter(id => !props.characterIds.includes(id) && id !== '-') // Avoid duplicates
+        .filter(id => !Object.keys(currentCharIds.value).includes(id) && id !== '-'); // Avoid duplicates
   
     if (newIds.length > 0) {
-        const updatedIds = [...new Set([...props.characterIds, ...newIds])];
-        emit('update:characterIds', updatedIds);
+        pendingCharIds.value = newIds;
     };
     inputValue.value = '';
 
     // Refocus the input after the DOM updates
-    await nextTick()
+    await nextTick();
     if (inputRef.value) {
-      inputRef.value.focus()
-    }
-}
+      inputRef.value.focus();
+    };
+};
 
 const removeCharacterId = (idToRemove) => {
-    const updatedIds = props.characterIds.filter(id => id !== idToRemove);
-    emit('update:characterIds', updatedIds);
-}
+    debugger;
+    if (Object.keys(currentCharIds.value).includes(idToRemove)) {
+        // If id is current, requires a delete request to server
+        const temp = currentCharIds.value;
+        delete temp[idToRemove];
+        currentCharIds.value = temp;
+        props.deleteCharacterById(idToRemove);
+    }
+    const updatedPendingIds = pendingCharIds.value.filter(id => id !== idToRemove);
+    pendingCharIds.value = updatedPendingIds;
+};
 
-const clearAllIds = () => {
-    emit('update:characterIds', []);
-}
+const clearPendingIds = () => {
+    pendingCharIds.value = [];
+};
 
 // Confirmation functions
-const confirmClearAll = () => {
-  confirmationMessage.value = `Are you sure you want to clear all ${props.characterIds.length} character IDs?`
-  pendingAction.value = () => clearAllIds()
-  showConfirmation.value = true
-}
+const confirmClearAllPendingIds = () => {
+  confirmationMessage.value = `Are you sure you want to clear all ${pendingCharIds.value.length} pending character IDs?`;
+  pendingAction.value = () => clearPendingIds();
+  showConfirmation.value = true;
+};
 
 const confirmAction = () => {
   if (pendingAction.value) {
-    pendingAction.value()
-  }
-  showConfirmation.value = false
-  pendingAction.value = null
-}
+    pendingAction.value();
+  };
+  showConfirmation.value = false;
+  pendingAction.value = null;
+};
 
 const cancelConfirmation = () => {
-  showConfirmation.value = false
-  pendingAction.value = null
-}
+  showConfirmation.value = false;
+  pendingAction.value = null;
+};
 
-const getAllNewCharacterDataCloseModal = (charIds, forceUpdate) => {
+const getAllNewCharacterDataCl = (charIds, forceUpdate) => {
     const filteredIds = charIds.filter(id => {
-        return !props.currentCharIds.includes(id)
-    })
-    props.getAllCharacterData(filteredIds, forceUpdate)
-    props.hideCharacterInputModal()
-}
+        return !Object.keys(currentCharIds.value).includes(id);
+    });
+    clearPendingIds();
+    props.getAllCharacterData(filteredIds, forceUpdate);
+};
 </script>
 
 <style scoped>
@@ -249,6 +276,7 @@ const getAllNewCharacterDataCloseModal = (charIds, forceUpdate) => {
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-bottom: 1rem;
+    margin-top: .5rem
 }
 
 .id-item {
@@ -257,7 +285,7 @@ const getAllNewCharacterDataCloseModal = (charIds, forceUpdate) => {
     background-color: var(--bg-tertiary);
     border: 1px solid var(--border-primary);
     border-radius: 0.5rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0.1rem 0.25rem;
     transition: all 0.2s ease;
 }
 
@@ -307,6 +335,36 @@ const getAllNewCharacterDataCloseModal = (charIds, forceUpdate) => {
     box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
 }
 
+.modal-header {
+  padding: 0 1rem 1.5rem 0;
+  width: 100%;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  color: var(--text-primary);
+}
+
 /* Clear Section */
 .clear-section {
     display: flex;
@@ -351,14 +409,6 @@ const getAllNewCharacterDataCloseModal = (charIds, forceUpdate) => {
     .input-group {
         flex-direction: column;
         align-items: stretch;
-    }
-  
-    .id-list {
-        flex-direction: column;
-    }
-    
-    .id-item {
-        justify-content: space-between;
     }
 }
 </style>

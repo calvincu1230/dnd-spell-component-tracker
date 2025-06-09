@@ -77,6 +77,12 @@ class BeyondDnDClient:
         if os.path.exists(directory_path):
             shutil.rmtree(directory_path)
 
+    def delete_character_by_id(self, char_id: str) -> dict:
+        all_data = self.__load_local_file_if_exists(self._LOCAL_CHARACTER_DATA_FILE)
+        if not all_data or 'characters' not in all_data:
+            raise BeyondDnDAPIError(message="Cached file not found or it contained no character data.", status_code=HTTPStatus.NOT_FOUND)
+        return self.__remove_relevant_char_data(all_data, char_id)
+
     def __get_one_characters_data(self, char_id: str) -> dict:
         campaign_data = {}
         resp = self.__get_bdnd_character_data(char_id)
@@ -285,3 +291,34 @@ class BeyondDnDClient:
             "description": campaign_data.get('description', ''),
             "dmUsername": campaign_data.get('dmUsername', '')
         }
+
+    @staticmethod
+    def __match_character_ids_with_campaign_id(campaign_id_to_match: str, character_data: dict[str, dict]) -> List[str]:
+        matched = []
+        for char_id, character in character_data.items():
+            campaign_id = character.get('campaignId', '')
+            if campaign_id_to_match == campaign_id:
+                matched.append(char_id)
+        return matched
+
+    def __remove_relevant_char_data(self, all_data: dict[str, dict], char_id: str) -> dict[str, dict]:
+        characters = all_data.get('characters', {})
+        character = characters.get(char_id)
+        campaigns = all_data.get('campaigns', {})
+        if not character:
+            raise BeyondDnDAPIError(message="Character not stored on server.", status_code=HTTPStatus.NOT_FOUND)
+        character_campaign_id = character.get('campaignId')
+        char_ids_in_campaign = self.__match_character_ids_with_campaign_id(character_campaign_id, characters)
+
+        del characters[char_id]
+        # There was only one character stored, delete it all now
+        if len(characters.keys()) == 0:
+            self.delete_all_cached_character_data()
+            return {'characters': {}, 'campaigns': {}}
+
+        # Character was only one from campaign, delete it too and signal
+        if len(char_ids_in_campaign) < 2 and char_id in char_ids_in_campaign:
+            del campaigns[character_campaign_id]
+        all_data = {'characters': characters, 'campaigns': campaigns}
+        self.__update_local_file_if_exists(all_data, self._LOCAL_CHARACTER_DATA_FILE)
+        return all_data

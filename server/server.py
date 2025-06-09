@@ -85,5 +85,19 @@ def delete_cached_data():
         )
 
 
+@app.delete("/characters/{char_id}")
+def delete_character_by_id(char_id: str):
+    try:
+        updated_data = beyond.delete_character_by_id(char_id)
+        return JSONResponse(status_code=HTTPStatus.ACCEPTED, content=updated_data)
+    except Exception as e:
+        return JSONResponse(
+            content={'message': f'An error occurred: {repr(e)}', 'statusCode': HTTPStatus.INTERNAL_SERVER_ERROR},
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
+
+
+# Note: This must be committed as commented out, otherwise the executable file will run the server again after
+#  stopping the bundled server
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8998)
