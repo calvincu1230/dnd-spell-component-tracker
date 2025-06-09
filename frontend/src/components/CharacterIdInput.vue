@@ -14,20 +14,29 @@
                         class="id-item"
                     >
                         <span class="id-text">{{ name }}</span>
-                        <!-- These funcs may need special delete func for confirm modal -->
                         <button 
-                            @click="removeCharacterId(id)"
+                            @click="removeExistingCharacterId(id)"
                             class="delete-button"
                             title="Remove ID"
                         >
                             ×
                         </button>
                     </div>
+                    <div v-if="Object.keys(currentCharIds).length === 0" class="no-items">
+                        <span class="id-text">No characters loaded</span>
+                    </div>
+                </div>
+                <!-- Clear All Button -->
+                <div v-if="Object.keys(currentCharIds).length > 0" class="clear-section">
+                    <GenericButton 
+                        :onClick="confirmClearAllCachedData"
+                        text="Clear All Existing IDs"
+                        variant="danger"
+                    />
                 </div>
             </h3>
              <!-- Pending Character ID Display -->
             <h3 class="modal-title">Pending ID(s):
-                <!-- Pending is working fine for clearing. Might need to fix for update button -->
                 <div class="id-list">
                     <div 
                         v-for="id in pendingCharIds" 
@@ -36,15 +45,18 @@
                     >
                         <span class="id-text">{{ id }}</span>
                         <button 
-                            @click="removeCharacterId(id)"
+                            @click="removePendingCharacterId(id)"
                             class="delete-button"
                             title="Remove ID"
                         >
                             ×
                         </button>
                     </div>
+                    <div v-if="pendingCharIds.length === 0" class="no-items">
+                        <span class="id-text">No pending IDs</span>
+                    </div>
                 </div>
-                <!-- Clear All Button -->
+                <!-- Clear All Pending ID Button -->
                 <div v-if="pendingCharIds.length > 0" class="clear-section">
                     <GenericButton 
                         :onClick="confirmClearAllPendingIds"
@@ -97,7 +109,7 @@
                     variant="primary"
                 />
                 <p class="helper-text">
-                    Note: If you have already entered the Character IDs, they should be cached by the backend and  don't need to enter IDs.
+                    Note: If you have already entered the Character IDs, they should be cached by the backend and don't need to enter IDs.
                 </p>
             </div>
         </div>
@@ -105,9 +117,10 @@
         <ConfirmationModal
             :show="showConfirmation"
             :message="confirmationMessage"
-            title="Clear All Pending Character IDs"
-            confirmText="Clear All"
+            title="Confirm Action"
+            :confirmText="confirmText"
             cancelText="Cancel"
+            :confirmVariant="confirmVariant"
             @confirm="confirmAction"
             @cancel="cancelConfirmation"
         />
@@ -115,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, defineModel } from 'vue';
+import { ref, nextTick, defineModel, watch } from 'vue';
 import GenericButton from './buttons/GenericButton.vue';
 import ConfirmationModal from './ConfirmationModal.vue';
 
@@ -123,18 +136,27 @@ const props = defineProps({
     getAllCharacterData: Function,
     hideCharacterInputModal: Function,
     deleteCharacterById: Function,
+    deleteAllCachedData: Function,
 });
 
 const currentCharIds = defineModel('currentCharIds', {
   type: Object,
   default: () => {},
 });
+
 const pendingCharIds = ref([]);
 const inputValue = ref('');
 const showConfirmation = ref(false);
 const confirmationMessage = ref('');
+const confirmText = ref('Confirm');
+const confirmVariant = ref('danger');
 const pendingAction = ref(null);
 const inputRef = ref(null);
+
+// Watch for changes in currentCharIds to ensure reactivity
+watch(currentCharIds, (/*newValue*/) => {
+//   console.log('Current character IDs updated:', newValue);
+}, { deep: true });
 
 const handleInput = (event) => {
     const value = event.target.value;
@@ -158,10 +180,11 @@ const addCharacterIds = async () => {
         .split(',')
         .map(id => id.trim())
         .filter(id => id.length > 0)
-        .filter(id => !Object.keys(currentCharIds.value).includes(id) && id !== '-'); // Avoid duplicates
+        .filter(id => !Object.keys(currentCharIds.value).includes(id) && !pendingCharIds.value.includes(id) && id !== '-'); // Avoid duplicates
   
     if (newIds.length > 0) {
-        pendingCharIds.value = newIds;
+        // Add to existing pending IDs instead of replacing
+        pendingCharIds.value = [...pendingCharIds.value, ...newIds];
     };
     inputValue.value = '';
 
@@ -172,47 +195,75 @@ const addCharacterIds = async () => {
     };
 };
 
-const removeCharacterId = (idToRemove) => {
-    debugger;
-    if (Object.keys(currentCharIds.value).includes(idToRemove)) {
-        // If id is current, requires a delete request to server
-        const temp = currentCharIds.value;
-        delete temp[idToRemove];
-        currentCharIds.value = temp;
+const removeExistingCharacterId = (idToRemove) => {
+    confirmationMessage.value = `Are you sure you want to remove character "${currentCharIds.value[idToRemove]}" (ID: ${idToRemove})? This will delete it from the server cache.`;
+    confirmText.value = 'Remove Character';
+    confirmVariant.value = 'danger';
+    pendingAction.value = () => {
+        // Call the delete function which should update the parent data
         props.deleteCharacterById(idToRemove);
-    }
+        // Create a new object without the deleted character
+        const updated = { ...currentCharIds.value };
+        delete updated[idToRemove];
+        currentCharIds.value = updated;
+        // console.log('Removed existing character:', idToRemove);
+        // console.log('Updated currentCharIds:', currentCharIds.value);
+    };
+    showConfirmation.value = true;
+};
+
+const removePendingCharacterId = (idToRemove) => {
     const updatedPendingIds = pendingCharIds.value.filter(id => id !== idToRemove);
     pendingCharIds.value = updatedPendingIds;
+    // console.log('Removed pending character:', idToRemove);
 };
 
 const clearPendingIds = () => {
     pendingCharIds.value = [];
+    // console.log('Cleared all pending IDs');
 };
 
 // Confirmation functions
 const confirmClearAllPendingIds = () => {
-  confirmationMessage.value = `Are you sure you want to clear all ${pendingCharIds.value.length} pending character IDs?`;
-  pendingAction.value = () => clearPendingIds();
-  showConfirmation.value = true;
+    confirmationMessage.value = `Are you sure you want to clear all ${pendingCharIds.value.length} pending character IDs?`;
+    confirmText.value = 'Clear Pending';
+    confirmVariant.value = 'outline';
+    pendingAction.value = () => clearPendingIds();
+    showConfirmation.value = true;
+};
+
+const confirmClearAllCachedData = () => {
+    confirmationMessage.value = `Are you sure you want to delete all ${Object.keys(currentCharIds.value).length} cached character IDs?`;
+    confirmText.value = 'Delete All Data';
+    confirmVariant.value = 'danger';
+    pendingAction.value = () => props.deleteAllCachedData();
+    showConfirmation.value = true;
 };
 
 const confirmAction = () => {
-  if (pendingAction.value) {
-    pendingAction.value();
-  };
-  showConfirmation.value = false;
-  pendingAction.value = null;
+    if (pendingAction.value) {
+        pendingAction.value();
+    };
+    showConfirmation.value = false;
+    pendingAction.value = null;
 };
 
 const cancelConfirmation = () => {
-  showConfirmation.value = false;
-  pendingAction.value = null;
+    showConfirmation.value = false;
+    pendingAction.value = null;
 };
 
 const getAllNewCharacterDataCl = (charIds, forceUpdate) => {
     const filteredIds = charIds.filter(id => {
         return !Object.keys(currentCharIds.value).includes(id);
     });
+    
+    if (filteredIds.length === 0) {
+        // console.log('No new character IDs to fetch');
+        return;
+    }
+    
+    // console.log('Fetching character data for IDs:', filteredIds);
     clearPendingIds();
     props.getAllCharacterData(filteredIds, forceUpdate);
 };
@@ -292,6 +343,16 @@ const getAllNewCharacterDataCl = (charIds, forceUpdate) => {
 .id-item:hover {
     background-color: var(--bg-hover);
     box-shadow: var(--shadow-sm);
+}
+
+.no-items {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-secondary);
+    border-radius: 0.5rem;
+    padding: 0.1rem 0.25rem;
+    opacity: 0.6;
 }
 
 .id-text {

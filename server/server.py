@@ -99,5 +99,5 @@ def delete_character_by_id(char_id: str):
 
 # Note: This must be committed as commented out, otherwise the executable file will run the server again after
 #  stopping the bundled server
-if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8998)
+# if __name__ == '__main__':
+#     uvicorn.run(app, host='0.0.0.0', port=8998)

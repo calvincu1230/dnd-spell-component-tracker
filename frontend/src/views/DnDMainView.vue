@@ -266,6 +266,7 @@
             :getAllCharacterData="props.getAllCharacterData"
             :hideCharacterInputModal="hideCharacterInputModal"
             :deleteCharacterById="props.deleteCharacterById"
+            :deleteAllCachedData="props.deleteAllCachedData"
             v-model:currentCharIds="characterIds"
           />
         </div>
@@ -275,9 +276,7 @@
 </template>
 
 <script setup>
-// TODO: Fix the Add Character remove one/clear all id funcs.
-// comment out the script entrypoint in server.py
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import checkMark from '../assets/green-checkmark.png';
 import xMark from '../assets/red-x-icon.png';
 import GenericButton from '../components/buttons/GenericButton.vue';
@@ -300,17 +299,19 @@ const props = defineProps({
   deleteCharacterById: Function,
 });
 
+// Reactive computed for character IDs with proper reactivity
 const characterIds = computed({
   get: () => {
     const ids = Object.keys(props.characterData) || [];
     if (ids.length == 0) return {};
     const idMap = {}
-    ids.forEach(id =>{
+    ids.forEach(id => {
       idMap[id] = props.characterData[id].name
     })
     return idMap
   },
   set: (value) => {
+    // console.log('Character IDs being set to:', value);
     return value
   }
 })
@@ -322,14 +323,33 @@ const showFocus = ref(false);
 const selectedCharacterId = ref("-");
 const selectedCampaignId = ref('all');
 const showDeleteConfirmation = ref(false);
-const showCharacterInputModal  = ref(false)
+const showCharacterInputModal = ref(false)
 const modelErrorMessage = ref(null)
 
-// // Computed properties
+// Watch for changes in characterData to update selectedCharacterId if needed
+watch(() => props.characterData, (newData) => {
+  // console.log('Character data changed:', newData);
+  
+  // If the currently selected character was deleted, reset selection
+  if (selectedCharacterId.value !== '-' && !newData[selectedCharacterId.value]) {
+    // console.log('Selected character was deleted, resetting selection');
+    selectedCharacterId.value = '-';
+  }
+  
+  // If we had no characters before and now we do, don't auto-select
+  // Let the user choose
+}, { deep: true, immediate: true });
+
+// Better filtering for characters
 const computedFilteredCharacterIds = computed(() => {
-  // const allIds = props.characterData ? Object.keys(props.characterData) : [];
-  if (selectedCampaignId.value === null || selectedCampaignId.value === 'all') return Object.keys(characterIds.value);
-  return Object.keys(characterIds.value).filter(characterInSelectedCampaign)
+  const allIds = Object.keys(props.characterData) || [];
+  if (selectedCampaignId.value === null || selectedCampaignId.value === 'all') {
+    return allIds;
+  }
+  return allIds.filter(id => {
+    const character = props.characterData[id];
+    return character && character.campaignId === selectedCampaignId.value;
+  });
 })
 
 const computedCampaignIds = computed(() => {
@@ -337,10 +357,10 @@ const computedCampaignIds = computed(() => {
 });
 
 // Filter characters based on selected campaign
-const characterInSelectedCampaign = (id) => {
-  const character = props.characterData[id];
-  return character.campaignId === selectedCampaignId.value;
-};
+// const characterInSelectedCampaign = (id) => {
+//   const character = props.characterData[id];
+//   return character.campaignId === selectedCampaignId.value;
+// };
 
 const handleCampaignChange = () => {
   selectedCharacterId.value = '-'

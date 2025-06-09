@@ -32,50 +32,77 @@ export default {
           },
           paramsSerializer: { indexes: null },
         });
-        this.characterData = {...this.characterData, ...res.data.characters};
-        this.campaignData = {...this.campaignData, ...res.data.campaigns};
+        if (res.data && res.data.characters) {
+          // console.log('Received character data:', res.data.characters);
+          this.characterData = { ...this.characterData, ...res.data.characters };
+        }
+        if (res.data && res.data.campaigns) {
+          // console.log('Received campaign data:', res.data.campaigns);
+          this.campaignData = { ...this.campaignData, ...res.data.campaigns };
+        }
       } catch(error) {
-        console.error(error);
+        console.error('Error fetching character data:', error);
       };
     },
     async updateCurrentCharactersData(characterId, forceUpdate) {
+      if (!characterId || characterId === '-') {
+        // console.log('No valid character ID provided for update');
+        return;
+      };
       try {
         const res = await axios.get(
           `http://127.0.0.1:8998/characters/${characterId}`, {
             params: {"force_update": forceUpdate},
             paramsSerializer: { indexes: null },
-          })
+          });
         if (res.data) {
-          this.characterData = {...this.characterData, ...res.data.characters};
-          this.campaignData = {...this.campaignData, ...res.data.campaigns};
-        }
+          // console.log('Updated character data:', res.data);
+          if (res.data.characters) {
+            this.characterData = {...this.characterData, ...res.data.characters};
+          };
+          if (res.data.campaigns) {
+            this.campaignData = {...this.campaignData, ...res.data.campaigns};
+          };
+        };
       } catch(error) {
-        console.log(error);
-      }
+        console.error('Error updating character data:', error);
+      };
     },
     async deleteAllCachedData() {
       try {
         await axios.delete('http://127.0.0.1:8998/characters')
-        this.campaignData = {}
-        this.characterData = {}
+        // console.log('All cached data deleted');
+        this.campaignData = {};
+        this.characterData = {};
       } catch(error) {
-        console.log(error);
+        console.error('Error deleting cached data:', error);
       }
     },
     async deleteCharacterById(characterId) {
-      if (!Object.keys(this.characterData).includes(characterId)) return;
+      if (!characterId || !Object.keys(this.characterData).includes(characterId)) {
+        // console.log('Character ID not found or invalid:', characterId);
+        return;
+      }
       try {
-        const res = await axios.delete(`http://127.0.0.1:8998/characters/${characterId}`)
+        // console.log('Deleting character:', characterId);
+        const res = await axios.delete(`http://127.0.0.1:8998/characters/${characterId}`);
         if (res.data) {
-          this.characterData = {...this.characterData, ...res.data.characters};
-          this.campaignData = {...this.campaignData, ...res.data.campaigns};
+          // console.log('Server response after deletion:', res.data);
+          // Replace entire objects to ensure reactivity
+          this.characterData = { ...res.data.characters };
+          this.campaignData = { ...res.data.campaigns };
+        } else {
+          // If no data returned, the character was the last one
+          // console.log('No data returned, assuming all characters deleted');
+          this.characterData = {};
+          this.campaignData = {};
         }
       } catch(error) {
-        console.log(error);
-      }
-    }
+        console.error('Error deleting character:', error);
+      };
+    },
   }
-}
+};
 </script>
 
 <template>
